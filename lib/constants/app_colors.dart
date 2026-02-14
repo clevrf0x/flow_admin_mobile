@@ -50,8 +50,23 @@ class AppColors {
   static const Color statusSoon = Color(0xFF778CA3);
 
   // === DASHBOARD SCREEN ===
-  static const Color dashboardBg = Color(0xFFF5F7FA);
+  static const Color dashboardBg =
+      Color(0xFF0D1117); // dark, matching game selection
+  static const Color dashboardSurface = Color(0xFF161B22); // card/row surface
+  static const Color dashboardSurface2 =
+      Color(0xFF1C2330); // slightly lighter surface
+  static const Color dashboardBorder = Color(0xFF21262D); // subtle borders
+  static const Color dashboardTextPrim = Color(0xFFE6EDF3); // primary text
+  static const Color dashboardTextSub =
+      Color(0xFF8B949E); // secondary/muted text
+  static const Color dashboardTextDim =
+      Color(0xFF484F58); // section headers, very muted
+  static const Color dashboardBlue =
+      Color(0xFF58A6FF); // accent blue (matches gsAccentBlue)
+  static const Color dashboardLogout = Color(0xFFDA3633); // logout button red
+
+  // Legacy light dashboard colors (kept for reference, not used in new design)
+  static const Color dashboardBgLight = Color(0xFFF5F7FA);
   static const Color dashboardHeader = Color(0xFFFFFFFF);
   static const Color dashboardText = Color(0xFF1A1A2E);
-  static const Color dashboardBlue = Color(0xFF1A6BAE);
 }

@@ -115,30 +115,24 @@ class AppTextStyles {
     letterSpacing: -2,
   );
 
-  // === DASHBOARD SCREEN ===
-  static const TextStyle dashboardGameName = TextStyle(
-    color: AppColors.dashboardBlue,
-    fontSize: 28,
-    fontWeight: FontWeight.w800,
-    letterSpacing: 0.5,
-  );
-
-  static const TextStyle dashboardLabel = TextStyle(
-    color: Color(0xFF6B8BB5),
-    fontSize: 11,
+  // === DASHBOARD SCREEN (dark theme) ===
+  static const TextStyle dashboardMenuLabel = TextStyle(
+    color: AppColors.dashboardTextPrim,
+    fontSize: 15,
     fontWeight: FontWeight.w600,
-    letterSpacing: 3.0,
+    letterSpacing: 0.1,
   );
 
-  static const TextStyle dashboardPlaceholder = TextStyle(
-    color: Color(0xFF9AAFC4),
-    fontSize: 14,
+  static const TextStyle dashboardMenuSubtitle = TextStyle(
+    color: AppColors.dashboardTextSub,
+    fontSize: 12,
     fontWeight: FontWeight.w400,
   );
 
-  static const TextStyle dashboardBackButton = TextStyle(
-    color: AppColors.dashboardBlue,
-    fontSize: 14,
-    fontWeight: FontWeight.w500,
+  static const TextStyle dashboardSectionHeader = TextStyle(
+    color: AppColors.dashboardTextDim,
+    fontSize: 10,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 2.0,
   );
 }

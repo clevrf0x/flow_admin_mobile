@@ -1,9 +1,8 @@
 // lib/widgets/game_card.dart
 
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../constants/app_text_styles.dart';
-import '../../models/game.dart';
+import '../models/game.dart';
 
 class GameCard extends StatelessWidget {
   final Game game;
@@ -42,8 +41,6 @@ class GameCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: Stack(
           children: [
-            // Diagonal stripe texture overlay
-            _buildStripeTexture(),
             // Ghost number (top-right)
             _buildGhostNumber(),
             // Card content
@@ -56,15 +53,14 @@ class GameCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStripeTexture() {
-    return Positioned.fill(child: CustomPaint(painter: _StripePainter()));
-  }
-
   Widget _buildGhostNumber() {
     return Positioned(
       top: -8,
       right: 16,
-      child: Text(game.ghostNumber, style: AppTextStyles.cardGhostNumber),
+      child: Text(
+        game.ghostNumber,
+        style: AppTextStyles.cardGhostNumber,
+      ),
     );
   }
 
@@ -108,7 +104,10 @@ class GameCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.25),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: game.statusColor.withOpacity(0.5), width: 1),
+        border: Border.all(
+          color: game.statusColor.withOpacity(0.5),
+          width: 1,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -162,9 +161,16 @@ class GameCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         color: Colors.white.withOpacity(0.15),
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+          width: 1,
+        ),
       ),
-      child: Icon(icon, color: Colors.white, size: 26),
+      child: Icon(
+        icon,
+        color: Colors.white,
+        size: 26,
+      ),
     );
   }
 
@@ -201,34 +207,4 @@ class GameCard extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Custom painter for diagonal stripe texture overlay
-class _StripePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.06)
-      ..strokeWidth = 18
-      ..style = PaintingStyle.stroke;
-
-    const double stripeSpacing = 36.0;
-    const double angle = 20.0 * (math.pi / 180.0);
-    final double diagonal = math.sqrt(
-      size.width * size.width + size.height * size.height,
-    );
-
-    canvas.save();
-    canvas.translate(size.width / 2, size.height / 2);
-    canvas.rotate(angle);
-
-    for (double x = -diagonal; x < diagonal; x += stripeSpacing) {
-      canvas.drawLine(Offset(x, -diagonal), Offset(x, diagonal), paint);
-    }
-
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_StripePainter oldDelegate) => false;
 }
