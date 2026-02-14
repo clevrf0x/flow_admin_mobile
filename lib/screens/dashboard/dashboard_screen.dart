@@ -457,6 +457,12 @@ class _MenuRow extends StatelessWidget {
             );
             return;
           }
+          if (item.id == 'booking') {
+            context.go(
+              '/dashboard/$gameId/booking?gameName=${Uri.encodeComponent(gameName)}',
+            );
+            return;
+          }
           // TODO: Navigate to item.route
         },
         highlightColor: accentColor.withOpacity(0.06),

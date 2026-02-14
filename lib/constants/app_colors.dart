@@ -69,4 +69,24 @@ class AppColors {
   static const Color dashboardBgLight = Color(0xFFF5F7FA);
   static const Color dashboardHeader = Color(0xFFFFFFFF);
   static const Color dashboardText = Color(0xFF1A1A2E);
+
+  // === BOOKING SCREEN — LSK type colors (match reference screenshots) ===
+  static const Color bookingBg = Color(0xFFF5F7FA); // light bg
+  static const Color bookingInputLine =
+      Color(0xFF1976D2); // blue underline (active)
+  static const Color bookingBtnBg = Color(0xFF0E7C7B); // teal action buttons
+  static const Color bookingBtnText = Color(0xFFFFFFFF);
+  static const Color bookingSaveBtn = Color(0xFF0E7C7B);
+  static const Color bookingFooterBg = Color(0xFFF0F0F0);
+
+  // LSK type label colors
+  static const Color lskAB = Color(0xFFE53935); // red/pink
+  static const Color lskAC = Color(0xFFFF8F00); // orange/amber
+  static const Color lskBC = Color(0xFF212121); // near-black
+  static const Color lskA = Color(0xFFE53935);
+  static const Color lskB = Color(0xFFE53935);
+  static const Color lskC = Color(0xFF1976D2); // blue
+  static const Color lskBox = Color(0xFF2E7D32); // green
+  static const Color lskSuper = Color(0xFF212121); // black
+  static const Color lskBoth = Color(0xFF6A1B9A); // purple
 }
