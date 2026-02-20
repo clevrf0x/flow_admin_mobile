@@ -55,7 +55,11 @@ class OthersScreen extends StatelessWidget {
             headerColors: headerColors,
           ),
           Expanded(
-            child: _OthersMenuList(accentColor: accentColor),
+            child: _OthersMenuList(
+              accentColor: accentColor,
+              gameId: gameId,
+              gameName: gameName,
+            ),
           ),
         ],
       ),
@@ -160,8 +164,14 @@ class _OthersHeader extends StatelessWidget {
 
 class _OthersMenuList extends StatelessWidget {
   final Color accentColor;
+  final String gameId;
+  final String gameName;
 
-  const _OthersMenuList({required this.accentColor});
+  const _OthersMenuList({
+    required this.accentColor,
+    required this.gameId,
+    required this.gameName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -186,6 +196,8 @@ class _OthersMenuList extends StatelessWidget {
                   item: othersMenuItems[i],
                   accentColor: accentColor,
                   isLast: i == othersMenuItems.length - 1,
+                  gameId: gameId,
+                  gameName: gameName,
                 ),
             ],
           ),
@@ -199,11 +211,15 @@ class _OthersMenuRow extends StatelessWidget {
   final OthersMenuItem item;
   final Color accentColor;
   final bool isLast;
+  final String gameId;
+  final String gameName;
 
   const _OthersMenuRow({
     required this.item,
     required this.accentColor,
     required this.isLast,
+    required this.gameId,
+    required this.gameName,
   });
 
   @override
@@ -212,7 +228,14 @@ class _OthersMenuRow extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          // TODO: Navigate to item sub-screen
+          // Navigate to settings if item id is 'settings'
+          if (item.id == 'settings') {
+            context.go(
+              '/dashboard/$gameId/settings?gameName=${Uri.encodeComponent(gameName)}',
+            );
+          } else {
+            // TODO: Navigate to other item sub-screens
+          }
         },
         highlightColor: accentColor.withOpacity(0.06),
         splashColor: accentColor.withOpacity(0.09),
