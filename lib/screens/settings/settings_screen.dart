@@ -359,7 +359,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     bool isLast = false,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           // Toggle switch
@@ -367,10 +367,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () => onToggle(!isEnabled),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              width: 52,
-              height: 30,
+              width: 44,
+              height: 26,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(13),
                 color: isEnabled
                     ? accentColor.withOpacity(0.3)
                     : AppColors.dashboardBorder,
@@ -380,8 +380,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 alignment:
                     isEnabled ? Alignment.centerRight : Alignment.centerLeft,
                 child: Container(
-                  width: 26,
-                  height: 26,
+                  width: 22,
+                  height: 22,
                   margin: const EdgeInsets.symmetric(horizontal: 2),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
@@ -391,7 +391,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           // Label and input
           Expanded(
             child: Column(
@@ -401,22 +401,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   label,
                   style: const TextStyle(
                     color: AppColors.dashboardTextSub,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Row(
                   children: [
                     const Text(
                       'Limit',
                       style: TextStyle(
                         color: AppColors.dashboardTextDim,
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: TextField(
                         controller: controller,
@@ -429,12 +429,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: isEnabled
                               ? AppColors.dashboardTextPrim
                               : AppColors.dashboardTextDim,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
                         ),
                         decoration: const InputDecoration(
                           isDense: true,
-                          contentPadding: EdgeInsets.symmetric(vertical: 4),
+                          contentPadding: EdgeInsets.symmetric(vertical: 2),
                           border: InputBorder.none,
                         ),
                       ),
