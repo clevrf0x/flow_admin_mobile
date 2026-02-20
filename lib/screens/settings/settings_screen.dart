@@ -224,27 +224,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
         highlightColor: accentColor.withOpacity(0.06),
         splashColor: accentColor.withOpacity(0.09),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          child: Row(
             children: [
-              Text(
-                label,
-                style: TextStyle(
+              // Icon box — matches menu row style
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.13),
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: accentColor.withOpacity(0.22)),
+                ),
+                child: Icon(
+                  Icons.access_time_rounded,
                   color: accentColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
+                  size: 18,
                 ),
               ),
-              const SizedBox(height: 10),
-              Text(
-                time.format(context),
-                style: const TextStyle(
-                  color: AppColors.dashboardTextPrim,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.3,
+              const SizedBox(width: 14),
+              // Label + value
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: AppColors.dashboardTextPrim,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      time.format(context),
+                      style: TextStyle(
+                        color: accentColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              // Chevron
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.dashboardTextDim,
+                size: 20,
               ),
             ],
           ),
@@ -263,7 +291,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'TOTAL COUNT SETTINGS',
             style: TextStyle(
               color: AppColors.dashboardTextDim,
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: FontWeight.w700,
               letterSpacing: 2.0,
             ),
