@@ -226,8 +226,8 @@ class _TodayScreenState extends State<TodayScreen> {
             child: Row(
               children: [
                 _headerCell('Number', 0, TextAlign.center, flex: true),
-                _headerCell('LSK', 72, TextAlign.center),
-                _headerCell('Count', 72, TextAlign.center),
+                _headerCell('LSK', 0, TextAlign.center, flex: true),
+                _headerCell('Count', 0, TextAlign.center, flex: true),
               ],
             ),
           ),
@@ -261,8 +261,7 @@ class _TodayScreenState extends State<TodayScreen> {
                       ),
                     ),
                     // LSK
-                    SizedBox(
-                      width: 72,
+                    Expanded(
                       child: Center(
                         child: Container(
                           padding: const EdgeInsets.symmetric(
@@ -289,8 +288,7 @@ class _TodayScreenState extends State<TodayScreen> {
                       ),
                     ),
                     // Count
-                    SizedBox(
-                      width: 72,
+                    Expanded(
                       child: Text(
                         '${entry.count}',
                         textAlign: TextAlign.center,
