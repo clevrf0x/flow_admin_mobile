@@ -5,21 +5,26 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../constants/app_colors.dart';
 import '../../models/game.dart';
-import '../../widgets/common_toast.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MOCK DATA — TODO: Replace with API call
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ReportEntry {
+  final int no;
   final String number;
   final String lsk;
   final int count;
+  final double dAmt; // TODO: from API (dealer-specific rate)
+  final double cAmt; // TODO: from API (customer-specific rate)
 
   const _ReportEntry({
+    required this.no,
     required this.number,
     required this.lsk,
     required this.count,
+    required this.dAmt,
+    required this.cAmt,
   });
 }
 
@@ -44,46 +49,46 @@ const List<String> _kDealers = [
 // Mock report entries per dealer — TODO: Replace with API call
 const Map<String, List<_ReportEntry>> _kMockData = {
   'All Dealers': [
-    _ReportEntry(number: '586', lsk: 'SUPER', count: 35),
-    _ReportEntry(number: '586', lsk: 'BOX',   count: 18),
-    _ReportEntry(number: '125', lsk: 'SUPER', count: 42),
-    _ReportEntry(number: '125', lsk: 'BOX',   count: 14),
-    _ReportEntry(number: '340', lsk: 'BOTH',  count: 27),
-    _ReportEntry(number: '77',  lsk: 'AB',    count: 20),
-    _ReportEntry(number: '77',  lsk: 'AC',    count: 9),
-    _ReportEntry(number: '99',  lsk: 'BC',    count: 33),
-    _ReportEntry(number: '5',   lsk: 'A',     count: 50),
-    _ReportEntry(number: '5',   lsk: 'B',     count: 26),
-    _ReportEntry(number: '3',   lsk: 'C',     count: 31),
-    _ReportEntry(number: '812', lsk: 'BOX',   count: 8),
-    _ReportEntry(number: '461', lsk: 'SUPER', count: 15),
-    _ReportEntry(number: '23',  lsk: 'AB',    count: 11),
-    _ReportEntry(number: '908', lsk: 'BOTH',  count: 19),
-    _ReportEntry(number: '444', lsk: 'SUPER', count: 22),
-    _ReportEntry(number: '321', lsk: 'BOX',   count: 7),
-    _ReportEntry(number: '67',  lsk: 'AC',    count: 13),
-    _ReportEntry(number: '890', lsk: 'BOTH',  count: 28),
-    _ReportEntry(number: '11',  lsk: 'AB',    count: 16),
+    _ReportEntry(no: 1,  number: '586', lsk: 'SUPER', count: 35, dAmt: 315.0,  cAmt: 350.0),
+    _ReportEntry(no: 2,  number: '586', lsk: 'BOX',   count: 18, dAmt: 162.0,  cAmt: 180.0),
+    _ReportEntry(no: 3,  number: '125', lsk: 'SUPER', count: 42, dAmt: 378.0,  cAmt: 420.0),
+    _ReportEntry(no: 4,  number: '125', lsk: 'BOX',   count: 14, dAmt: 126.0,  cAmt: 140.0),
+    _ReportEntry(no: 5,  number: '340', lsk: 'BOTH',  count: 27, dAmt: 243.0,  cAmt: 270.0),
+    _ReportEntry(no: 6,  number: '77',  lsk: 'AB',    count: 20, dAmt: 180.0,  cAmt: 200.0),
+    _ReportEntry(no: 7,  number: '77',  lsk: 'AC',    count: 9,  dAmt: 81.0,   cAmt: 90.0),
+    _ReportEntry(no: 8,  number: '99',  lsk: 'BC',    count: 33, dAmt: 297.0,  cAmt: 330.0),
+    _ReportEntry(no: 9,  number: '5',   lsk: 'A',     count: 50, dAmt: 450.0,  cAmt: 500.0),
+    _ReportEntry(no: 10, number: '5',   lsk: 'B',     count: 26, dAmt: 234.0,  cAmt: 260.0),
+    _ReportEntry(no: 11, number: '3',   lsk: 'C',     count: 31, dAmt: 279.0,  cAmt: 310.0),
+    _ReportEntry(no: 12, number: '812', lsk: 'BOX',   count: 8,  dAmt: 72.0,   cAmt: 80.0),
+    _ReportEntry(no: 13, number: '461', lsk: 'SUPER', count: 15, dAmt: 135.0,  cAmt: 150.0),
+    _ReportEntry(no: 14, number: '23',  lsk: 'AB',    count: 11, dAmt: 99.0,   cAmt: 110.0),
+    _ReportEntry(no: 15, number: '908', lsk: 'BOTH',  count: 19, dAmt: 171.0,  cAmt: 190.0),
+    _ReportEntry(no: 16, number: '444', lsk: 'SUPER', count: 22, dAmt: 198.0,  cAmt: 220.0),
+    _ReportEntry(no: 17, number: '321', lsk: 'BOX',   count: 7,  dAmt: 63.0,   cAmt: 70.0),
+    _ReportEntry(no: 18, number: '67',  lsk: 'AC',    count: 13, dAmt: 117.0,  cAmt: 130.0),
+    _ReportEntry(no: 19, number: '890', lsk: 'BOTH',  count: 28, dAmt: 252.0,  cAmt: 280.0),
+    _ReportEntry(no: 20, number: '11',  lsk: 'AB',    count: 16, dAmt: 144.0,  cAmt: 160.0),
   ],
   'Kurukkan': [
-    _ReportEntry(number: '586', lsk: 'SUPER', count: 10),
-    _ReportEntry(number: '125', lsk: 'BOX',   count: 5),
-    _ReportEntry(number: '77',  lsk: 'AB',    count: 8),
-    _ReportEntry(number: '340', lsk: 'BOTH',  count: 12),
-    _ReportEntry(number: '99',  lsk: 'BC',    count: 6),
+    _ReportEntry(no: 1, number: '586', lsk: 'SUPER', count: 10, dAmt: 90.0,  cAmt: 100.0),
+    _ReportEntry(no: 2, number: '125', lsk: 'BOX',   count: 5,  dAmt: 45.0,  cAmt: 50.0),
+    _ReportEntry(no: 3, number: '77',  lsk: 'AB',    count: 8,  dAmt: 72.0,  cAmt: 80.0),
+    _ReportEntry(no: 4, number: '340', lsk: 'BOTH',  count: 12, dAmt: 108.0, cAmt: 120.0),
+    _ReportEntry(no: 5, number: '99',  lsk: 'BC',    count: 6,  dAmt: 54.0,  cAmt: 60.0),
   ],
   'BLT': [
-    _ReportEntry(number: '461', lsk: 'SUPER', count: 7),
-    _ReportEntry(number: '908', lsk: 'BOTH',  count: 9),
-    _ReportEntry(number: '5',   lsk: 'A',     count: 15),
-    _ReportEntry(number: '23',  lsk: 'AB',    count: 4),
+    _ReportEntry(no: 1, number: '461', lsk: 'SUPER', count: 7,  dAmt: 63.0,  cAmt: 70.0),
+    _ReportEntry(no: 2, number: '908', lsk: 'BOTH',  count: 9,  dAmt: 81.0,  cAmt: 90.0),
+    _ReportEntry(no: 3, number: '5',   lsk: 'A',     count: 15, dAmt: 135.0, cAmt: 150.0),
+    _ReportEntry(no: 4, number: '23',  lsk: 'AB',    count: 4,  dAmt: 36.0,  cAmt: 40.0),
   ],
   'SELF': [
-    _ReportEntry(number: '812', lsk: 'BOX',   count: 3),
-    _ReportEntry(number: '3',   lsk: 'C',     count: 11),
-    _ReportEntry(number: '444', lsk: 'SUPER', count: 8),
-    _ReportEntry(number: '67',  lsk: 'AC',    count: 6),
-    _ReportEntry(number: '890', lsk: 'BOTH',  count: 14),
+    _ReportEntry(no: 1, number: '812', lsk: 'BOX',   count: 3,  dAmt: 27.0,  cAmt: 30.0),
+    _ReportEntry(no: 2, number: '3',   lsk: 'C',     count: 11, dAmt: 99.0,  cAmt: 110.0),
+    _ReportEntry(no: 3, number: '444', lsk: 'SUPER', count: 8,  dAmt: 72.0,  cAmt: 80.0),
+    _ReportEntry(no: 4, number: '67',  lsk: 'AC',    count: 6,  dAmt: 54.0,  cAmt: 60.0),
+    _ReportEntry(no: 5, number: '890', lsk: 'BOTH',  count: 14, dAmt: 126.0, cAmt: 140.0),
   ],
 };
 
@@ -110,19 +115,10 @@ class DailyReportScreen extends StatefulWidget {
 }
 
 class _DailyReportScreenState extends State<DailyReportScreen> {
-  // Dealer filter
   String _selectedDealer = 'All Dealers';
-
-  // Date range
   DateTime _fromDate = DateTime.now().subtract(const Duration(days: 6));
   DateTime _toDate = DateTime.now();
-
-  // LSK filter
   String _selectedLsk = 'ALL';
-
-  // Search
-  String _searchQuery = '';
-  final TextEditingController _searchController = TextEditingController();
 
   Game? get _game {
     try {
@@ -138,13 +134,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     return headerColors.first;
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  // ── Filtered data ──────────────────────────────────────────────────────────
+  // ── Data ──────────────────────────────────────────────────────────────────
 
   List<_ReportEntry> get _sourceEntries {
     // TODO: API call — fetch entries by dealer + date range
@@ -155,27 +145,18 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   }
 
   List<_ReportEntry> get _filteredEntries {
-    return _sourceEntries.where((e) {
-      if (_selectedLsk != 'ALL' && e.lsk != _selectedLsk) return false;
-      if (_searchQuery.isNotEmpty &&
-          !e.number.contains(_searchQuery) &&
-          !e.lsk.toLowerCase().contains(_searchQuery.toLowerCase())) {
-        return false;
-      }
-      return true;
-    }).toList();
+    if (_selectedLsk == 'ALL') return _sourceEntries;
+    return _sourceEntries.where((e) => e.lsk == _selectedLsk).toList();
   }
 
   int get _totalCount =>
       _filteredEntries.fold(0, (sum, e) => sum + e.count);
+  double get _totalDamt =>
+      _filteredEntries.fold(0.0, (sum, e) => sum + e.dAmt);
+  double get _totalCamt =>
+      _filteredEntries.fold(0.0, (sum, e) => sum + e.cAmt);
 
-  int get _grandTotalCount =>
-      _sourceEntries.fold(0, (sum, e) => sum + e.count);
-
-  bool get _isFiltered =>
-      _selectedLsk != 'ALL' || _searchQuery.isNotEmpty;
-
-  // ── Date pickers ───────────────────────────────────────────────────────────
+  // ── Date pickers ──────────────────────────────────────────────────────────
 
   Future<void> _pickFromDate(Color accentColor) async {
     final picked = await showDatePicker(
@@ -183,7 +164,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
       initialDate: _fromDate,
       firstDate: DateTime(2020),
       lastDate: _toDate,
-      builder: (context, child) => _darkDatePickerTheme(accentColor, child!),
+      builder: (context, child) => _darkDateTheme(accentColor, child!),
     );
     if (picked != null) setState(() => _fromDate = picked);
   }
@@ -194,33 +175,28 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
       initialDate: _toDate,
       firstDate: _fromDate,
       lastDate: DateTime.now(),
-      builder: (context, child) => _darkDatePickerTheme(accentColor, child!),
+      builder: (context, child) => _darkDateTheme(accentColor, child!),
     );
     if (picked != null) setState(() => _toDate = picked);
   }
 
-  Widget _darkDatePickerTheme(Color accentColor, Widget child) {
-    return Theme(
-      data: ThemeData.dark().copyWith(
-        colorScheme: ColorScheme.dark(
-          primary: accentColor,
-          onPrimary: Colors.white,
-          surface: AppColors.dashboardSurface,
-          onSurface: AppColors.dashboardTextPrim,
+  Widget _darkDateTheme(Color accentColor, Widget child) => Theme(
+        data: ThemeData.dark().copyWith(
+          colorScheme: ColorScheme.dark(
+            primary: accentColor,
+            onPrimary: Colors.white,
+            surface: AppColors.dashboardSurface,
+            onSurface: AppColors.dashboardTextPrim,
+          ),
+          dialogBackgroundColor: AppColors.dashboardSurface,
         ),
-        dialogBackgroundColor: AppColors.dashboardSurface,
-      ),
-      child: child,
-    );
-  }
+        child: child,
+      );
 
-  String _formatDate(DateTime date) {
-    final d = date.day.toString().padLeft(2, '0');
-    final m = date.month.toString().padLeft(2, '0');
-    return '$d/${m}/${date.year}';
-  }
+  String _fmt(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
-  // ── Dealer picker ──────────────────────────────────────────────────────────
+  // ── Dealer picker ─────────────────────────────────────────────────────────
 
   void _showDealerPicker(Color accentColor) {
     showDialog(
@@ -236,128 +212,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     );
   }
 
-  // ── LSK picker ────────────────────────────────────────────────────────────
-
-  void _showLskPicker(Color accentColor) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: AppColors.dashboardSurface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Handle
-              Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 4),
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.dashboardBorder,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              // Title
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                child: Row(
-                  children: [
-                    const Text(
-                      'Filter by LSK Type',
-                      style: TextStyle(
-                        color: AppColors.dashboardTextPrim,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (_selectedLsk != 'ALL')
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          setState(() => _selectedLsk = 'ALL');
-                        },
-                        child: Text(
-                          'Clear',
-                          style: TextStyle(
-                            color: accentColor,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              Container(height: 1, color: AppColors.dashboardBorder),
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.5,
-                ),
-                child: Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _kAllLsk.map((lsk) {
-                        final isSelected = lsk == _selectedLsk;
-                        final color = _lskColor(lsk);
-                        return GestureDetector(
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            setState(() => _selectedLsk = lsk);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 18, vertical: 10),
-                            margin: const EdgeInsets.only(left: 8),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? color.withOpacity(0.18)
-                                  : AppColors.dashboardBg,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: isSelected
-                                    ? color.withOpacity(0.6)
-                                    : AppColors.dashboardBorder,
-                                width: isSelected ? 1.5 : 1,
-                              ),
-                            ),
-                            child: Text(
-                              lsk,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? color
-                                    : AppColors.dashboardTextSub,
-                                fontSize: 13,
-                                fontWeight: isSelected
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(
-                  height: MediaQuery.of(context).padding.bottom + 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  // ── LSK color ─────────────────────────────────────────────────────────────
 
   Color _lskColor(String lsk) {
     switch (lsk.toUpperCase()) {
@@ -374,7 +229,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     }
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -395,20 +250,20 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
       backgroundColor: AppColors.dashboardBg,
       body: Column(
         children: [
-          // ── Page header ──
+          // ── Header ──
           _DailyReportHeader(
             gameName: widget.gameName,
             gameId: widget.gameId,
             headerColors: headerColors,
           ),
-          // ── Summary card ──
-          _buildSummaryCard(headerColors, accentColor),
-          // ── Filter bar ──
-          _buildFilterBar(accentColor),
+          // ── Controls panel ──
+          _buildControlsPanel(accentColor, headerColors),
+          // ── LSK tabs ──
+          _buildLskTabs(accentColor),
           // ── Table ──
           Expanded(
             child: filtered.isEmpty
-                ? _buildEmptyState(accentColor)
+                ? _buildEmptyState()
                 : _buildTable(filtered, accentColor),
           ),
         ],
@@ -416,244 +271,275 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     );
   }
 
-  // ── Summary card ──────────────────────────────────────────────────────────
+  // ── Controls panel (dealer + dates + summary stats) ───────────────────────
 
-  Widget _buildSummaryCard(
-      List<Color> headerColors, Color accentColor) {
+  Widget _buildControlsPanel(Color accentColor, List<Color> headerColors) {
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: headerColors.length >= 2
-              ? [
-                  headerColors[0].withOpacity(0.92),
-                  headerColors.last.withOpacity(0.85),
-                ]
-              : [headerColors[0].withOpacity(0.92), headerColors[0].withOpacity(0.85)],
-        ),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
-      child: Row(
+      color: AppColors.dashboardSurface,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left: dealer + date range + entry count
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.person_rounded,
-                        color: Colors.white70, size: 13),
-                    const SizedBox(width: 5),
-                    Text(
-                      _selectedDealer,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    const Icon(Icons.date_range_rounded,
-                        color: Colors.white60, size: 13),
-                    const SizedBox(width: 5),
-                    Text(
-                      '${_formatDate(_fromDate)}  –  ${_formatDate(_toDate)}',
-                      style: const TextStyle(
-                        color: Colors.white60,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '$_grandTotalCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 36,
-                        fontWeight: FontWeight.w800,
-                        height: 1,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        'total entries',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          // Right: filtered chip (only when active)
-          if (_isFiltered)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          // ── Dealer button ──
+          GestureDetector(
+            onTap: () => _showDealerPicker(accentColor),
+            child: Container(
+              width: double.infinity,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.18),
-                borderRadius: BorderRadius.circular(8),
-                border:
-                    Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                color: AppColors.dashboardBg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: _selectedDealer != 'All Dealers'
+                      ? accentColor.withOpacity(0.5)
+                      : AppColors.dashboardBorder,
+                  width: _selectedDealer != 'All Dealers' ? 1.5 : 1,
+                ),
               ),
-              child: Column(
+              child: Row(
                 children: [
-                  const Text(
-                    'Filtered',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: accentColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: Icon(Icons.person_rounded,
+                        color: accentColor, size: 16),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Dealer',
+                          style: TextStyle(
+                            color: AppColors.dashboardTextDim,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          _selectedDealer,
+                          style: TextStyle(
+                            color: _selectedDealer != 'All Dealers'
+                                ? accentColor
+                                : AppColors.dashboardTextPrim,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$_totalCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      height: 1,
-                    ),
-                  ),
+                  Icon(Icons.keyboard_arrow_down_rounded,
+                      color: AppColors.dashboardTextSub, size: 20),
                 ],
               ),
             ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // ── Date range row ──
+          Row(
+            children: [
+              // From date
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _pickFromDate(accentColor),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.dashboardBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: AppColors.dashboardBorder, width: 1),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_today_rounded,
+                            color: accentColor, size: 14),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'FROM',
+                                style: TextStyle(
+                                  color: AppColors.dashboardTextDim,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                              Text(
+                                _fmt(_fromDate),
+                                style: TextStyle(
+                                  color: accentColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  '→',
+                  style: TextStyle(
+                    color: AppColors.dashboardTextDim,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w300,
+                  ),
+                ),
+              ),
+              // To date
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _pickToDate(accentColor),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.dashboardBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: AppColors.dashboardBorder, width: 1),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_today_rounded,
+                            color: accentColor, size: 14),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'TO',
+                                style: TextStyle(
+                                  color: AppColors.dashboardTextDim,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                              Text(
+                                _fmt(_toDate),
+                                style: TextStyle(
+                                  color: accentColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // ── Summary stats row ──
+          Row(
+            children: [
+              _StatBox(
+                label: 'Total Entries',
+                value: '$_totalCount',
+                accentColor: accentColor,
+              ),
+              const SizedBox(width: 8),
+              _StatBox(
+                label: 'D. Amount',
+                value: _totalDamt.toStringAsFixed(0),
+                accentColor: accentColor,
+              ),
+              const SizedBox(width: 8),
+              _StatBox(
+                label: 'C. Amount',
+                value: _totalCamt.toStringAsFixed(0),
+                accentColor: accentColor,
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  // ── Filter bar ────────────────────────────────────────────────────────────
+  // ── LSK filter tabs ───────────────────────────────────────────────────────
 
-  Widget _buildFilterBar(Color accentColor) {
+  Widget _buildLskTabs(Color accentColor) {
     return Container(
       color: AppColors.dashboardSurface,
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 10),
       child: Column(
         children: [
-          // Row 1: Dealer + Date Range
-          Row(
-            children: [
-              // Dealer button
-              Expanded(
-                child: _FilterChip(
-                  icon: Icons.person_outline_rounded,
-                  label: _selectedDealer == 'All Dealers'
-                      ? 'All Dealers'
-                      : _selectedDealer,
-                  accentColor: _selectedDealer != 'All Dealers'
-                      ? accentColor
-                      : AppColors.dashboardTextSub,
-                  isActive: _selectedDealer != 'All Dealers',
-                  onTap: () => _showDealerPicker(accentColor),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // From date
-              _FilterChip(
-                icon: Icons.calendar_today_rounded,
-                label: _formatDate(_fromDate),
-                accentColor: accentColor,
-                isActive: true,
-                onTap: () => _pickFromDate(accentColor),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Text(
-                  '–',
-                  style: TextStyle(
-                    color: AppColors.dashboardTextDim,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              // To date
-              _FilterChip(
-                icon: Icons.calendar_today_rounded,
-                label: _formatDate(_toDate),
-                accentColor: accentColor,
-                isActive: true,
-                onTap: () => _pickToDate(accentColor),
-              ),
-            ],
-          ),
+          Container(height: 1, color: AppColors.dashboardBorder),
           const SizedBox(height: 8),
-          // Row 2: Search + LSK
-          Row(
-            children: [
-              // Search field
-              Expanded(
-                child: SizedBox(
-                  height: 36,
-                  child: TextField(
-                    controller: _searchController,
-                    style: const TextStyle(
-                        color: AppColors.dashboardTextPrim, fontSize: 13),
-                    onChanged: (q) => setState(() => _searchQuery = q),
-                    decoration: InputDecoration(
-                      hintText: 'Search number...',
-                      hintStyle: const TextStyle(
-                          color: AppColors.dashboardTextDim, fontSize: 13),
-                      prefixIcon: const Icon(Icons.search_rounded,
-                          color: AppColors.dashboardTextDim, size: 16),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? GestureDetector(
-                              onTap: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                              child: const Icon(Icons.close_rounded,
-                                  color: AppColors.dashboardTextDim, size: 16),
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: AppColors.dashboardBg,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(
-                            color: AppColors.dashboardBorder, width: 1),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              children: _kAllLsk.map((lsk) {
+                final isSelected = lsk == _selectedLsk;
+                final color =
+                    lsk == 'ALL' ? accentColor : _lskColor(lsk);
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedLsk = lsk),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    margin: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? color.withOpacity(0.15)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected
+                            ? color.withOpacity(0.6)
+                            : AppColors.dashboardBorder,
+                        width: isSelected ? 1.5 : 1,
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide:
-                            BorderSide(color: accentColor, width: 1.5),
+                    ),
+                    child: Text(
+                      lsk,
+                      style: TextStyle(
+                        color: isSelected
+                            ? color
+                            : AppColors.dashboardTextSub,
+                        fontSize: 11,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        letterSpacing: 0.3,
                       ),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // LSK filter button
-              _FilterChip(
-                icon: Icons.filter_list_rounded,
-                label: _selectedLsk == 'ALL' ? 'LSK' : _selectedLsk,
-                accentColor: _selectedLsk != 'ALL'
-                    ? _lskColor(_selectedLsk)
-                    : AppColors.dashboardTextSub,
-                isActive: _selectedLsk != 'ALL',
-                onTap: () => _showLskPicker(accentColor),
-              ),
-            ],
+                );
+              }).toList(),
+            ),
           ),
         ],
       ),
@@ -662,12 +548,12 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
 
   // ── Table ─────────────────────────────────────────────────────────────────
 
-  Widget _buildEmptyState(Color accentColor) {
+  Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.inbox_rounded,
+          const Icon(Icons.inbox_rounded,
               color: AppColors.dashboardTextDim, size: 48),
           const SizedBox(height: 12),
           const Text(
@@ -679,7 +565,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'Try adjusting your filters',
+            'Try changing the dealer, date range, or LSK filter',
             style: TextStyle(
                 color: AppColors.dashboardTextDim, fontSize: 12),
           ),
@@ -689,187 +575,285 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   }
 
   Widget _buildTable(List<_ReportEntry> entries, Color accentColor) {
+    // Fixed widths for the 6 columns
+    const double wNo = 40;
+    const double wNum = 72;
+    const double wLsk = 68;
+    const double wCount = 56;
+    const double wDamt = 72;
+    const double wCamt = 72;
+    const double totalW = wNo + wNum + wLsk + wCount + wDamt + wCamt;
+
+    const headerStyle = TextStyle(
+      color: AppColors.dashboardTextDim,
+      fontSize: 10,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 1.0,
+    );
+
+    // Totals footer
+    final totCount = entries.fold(0, (s, e) => s + e.count);
+    final totDamt = entries.fold(0.0, (s, e) => s + e.dAmt);
+    final totCamt = entries.fold(0.0, (s, e) => s + e.cAmt);
+
     return SingleChildScrollView(
-      child: Column(
-        children: [
-          // Table header
-          Container(
-            color: AppColors.dashboardSurface2,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-            child: const Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'NUMBER',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.dashboardTextDim,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    'LSK',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.dashboardTextDim,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    'COUNT',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.dashboardTextDim,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Data rows
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: entries.length,
-            itemBuilder: (context, index) {
-              final entry = entries[index];
-              final isEven = index % 2 == 0;
-              final lskColor = _lskColor(entry.lsk);
-              return Container(
-                color: isEven
-                    ? AppColors.dashboardBg
-                    : AppColors.dashboardSurface.withOpacity(0.6),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 10),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: totalW,
+          child: Column(
+            children: [
+              // ── Header row ──
+              Container(
+                color: AppColors.dashboardSurface2,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 0, vertical: 9),
                 child: Row(
                   children: [
-                    // Number
-                    Expanded(
+                    _hCell('NO', wNo, TextAlign.center, headerStyle),
+                    _hCell('NUMBER', wNum, TextAlign.center, headerStyle),
+                    _hCell('LSK', wLsk, TextAlign.center, headerStyle),
+                    _hCell('COUNT', wCount, TextAlign.center, headerStyle),
+                    _hCell('D.AMT', wDamt, TextAlign.center, headerStyle),
+                    _hCell('C.AMT', wCamt, TextAlign.center, headerStyle),
+                  ],
+                ),
+              ),
+              // ── Data rows ──
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: entries.length,
+                itemBuilder: (context, index) {
+                  final e = entries[index];
+                  final isEven = index % 2 == 0;
+                  final lskColor = _lskColor(e.lsk);
+                  return Container(
+                    color: isEven
+                        ? AppColors.dashboardBg
+                        : AppColors.dashboardSurface.withOpacity(0.6),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Row(
+                      children: [
+                        // No
+                        SizedBox(
+                          width: wNo,
+                          child: Text(
+                            '${e.no}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: AppColors.dashboardTextDim,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        // Number
+                        SizedBox(
+                          width: wNum,
+                          child: Text(
+                            e.number,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: AppColors.dashboardTextPrim,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        // LSK badge
+                        SizedBox(
+                          width: wLsk,
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: lskColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                  color: lskColor.withOpacity(0.3),
+                                  width: 0.5,
+                                ),
+                              ),
+                              child: Text(
+                                e.lsk,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: lskColor,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Count
+                        SizedBox(
+                          width: wCount,
+                          child: Text(
+                            '${e.count}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: AppColors.dashboardTextPrim,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        // D.Amt
+                        SizedBox(
+                          width: wDamt,
+                          child: Text(
+                            e.dAmt.toStringAsFixed(0),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: AppColors.dashboardTextSub,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        // C.Amt
+                        SizedBox(
+                          width: wCamt,
+                          child: Text(
+                            e.cAmt.toStringAsFixed(0),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: AppColors.dashboardTextSub,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              // ── Totals footer ──
+              Container(
+                color: AppColors.dashboardSurface2,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: wNo + wNum + wLsk,
+                      child: const Text(
+                        'TOTAL',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.dashboardTextDim,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: wCount,
                       child: Text(
-                        entry.number,
+                        '$totCount',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: AppColors.dashboardTextPrim,
-                          fontSize: 13,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
-                    // LSK badge
-                    Expanded(
-                      child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: lskColor.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: lskColor.withOpacity(0.3),
-                              width: 0.5,
-                            ),
-                          ),
-                          child: Text(
-                            entry.lsk,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: lskColor,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Count
-                    Expanded(
+                    SizedBox(
+                      width: wDamt,
                       child: Text(
-                        '${entry.count}',
+                        totDamt.toStringAsFixed(0),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: AppColors.dashboardTextSub,
                           fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: wCamt,
+                      child: Text(
+                        totCamt.toStringAsFixed(0),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppColors.dashboardTextSub,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
                   ],
                 ),
-              );
-            },
+              ),
+            ],
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _hCell(
+      String label, double width, TextAlign align, TextStyle style) {
+    return SizedBox(
+      width: width,
+      child: Text(label, textAlign: align, style: style),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FILTER CHIP WIDGET
+// STAT BOX
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _FilterChip extends StatelessWidget {
-  final IconData icon;
+class _StatBox extends StatelessWidget {
   final String label;
+  final String value;
   final Color accentColor;
-  final bool isActive;
-  final VoidCallback onTap;
 
-  const _FilterChip({
-    required this.icon,
+  const _StatBox({
     required this.label,
+    required this.value,
     required this.accentColor,
-    required this.isActive,
-    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    return Expanded(
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          color: isActive
-              ? accentColor.withOpacity(0.1)
-              : AppColors.dashboardBg,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isActive
-                ? accentColor.withOpacity(0.45)
-                : AppColors.dashboardBorder,
-            width: isActive ? 1.5 : 1,
-          ),
+          color: AppColors.dashboardBg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.dashboardBorder, width: 1),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: accentColor, size: 13),
-            const SizedBox(width: 5),
             Text(
               label,
+              style: const TextStyle(
+                color: AppColors.dashboardTextDim,
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
               style: TextStyle(
-                color: isActive
-                    ? accentColor
-                    : AppColors.dashboardTextSub,
-                fontSize: 12,
-                fontWeight:
-                    isActive ? FontWeight.w600 : FontWeight.w400,
+                color: accentColor,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                height: 1,
               ),
             ),
           ],
@@ -981,7 +965,7 @@ class _DailyReportHeader extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DEALER PICKER DIALOG (reused from booking screen pattern)
+// DEALER PICKER DIALOG
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _DealerPickerDialog extends StatefulWidget {
@@ -1013,8 +997,8 @@ class _DealerPickerDialogState extends State<_DealerPickerDialog> {
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(
-        () => setState(() => _query = _searchController.text));
+    _searchController
+        .addListener(() => setState(() => _query = _searchController.text));
     WidgetsBinding.instance.addPostFrameCallback(
         (_) => FocusScope.of(context).requestFocus(_searchFocus));
   }
@@ -1091,7 +1075,8 @@ class _DealerPickerDialogState extends State<_DealerPickerDialog> {
                       color: AppColors.dashboardTextDim, size: 20),
                   filled: true,
                   fillColor: AppColors.dashboardBg,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 12),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: const BorderSide(
@@ -1128,8 +1113,6 @@ class _DealerPickerDialogState extends State<_DealerPickerDialog> {
                         final dealer = dealers[index];
                         final isSelected =
                             dealer == widget.selectedDealer;
-                        final isPlaceholder =
-                            dealer == 'All Dealers' && index == 0;
 
                         return Material(
                           color: Colors.transparent,
@@ -1144,10 +1127,9 @@ class _DealerPickerDialogState extends State<_DealerPickerDialog> {
                                   horizontal: 16, vertical: 14),
                               child: Row(
                                 children: [
-                                  // Radio indicator
                                   AnimatedContainer(
-                                    duration:
-                                        const Duration(milliseconds: 150),
+                                    duration: const Duration(
+                                        milliseconds: 150),
                                     width: 22,
                                     height: 22,
                                     decoration: BoxDecoration(
@@ -1168,11 +1150,9 @@ class _DealerPickerDialogState extends State<_DealerPickerDialog> {
                                       fontWeight: isSelected
                                           ? FontWeight.w600
                                           : FontWeight.w400,
-                                      color: isPlaceholder
-                                          ? AppColors.dashboardTextSub
-                                          : isSelected
-                                              ? AppColors.dashboardTextPrim
-                                              : AppColors.dashboardTextSub,
+                                      color: isSelected
+                                          ? AppColors.dashboardTextPrim
+                                          : AppColors.dashboardTextSub,
                                     ),
                                   ),
                                 ],
