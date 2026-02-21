@@ -8,6 +8,7 @@ import '../screens/others/others_screen.dart';
 import '../screens/change_password/change_password_screen.dart';
 import '../screens/booking/booking_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../screens/today/today_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/login',
@@ -58,6 +59,14 @@ final appRouter = GoRouter(
         final gameId = state.pathParameters['gameId']!;
         final gameName = state.uri.queryParameters['gameName'] ?? gameId;
         return SettingsScreen(gameId: gameId, gameName: gameName);
+      },
+    ),
+    GoRoute(
+      path: '/dashboard/:gameId/today',
+      builder: (context, state) {
+        final gameId = state.pathParameters['gameId']!;
+        final gameName = state.uri.queryParameters['gameName'] ?? gameId;
+        return TodayScreen(gameId: gameId, gameName: gameName);
       },
     ),
   ],
