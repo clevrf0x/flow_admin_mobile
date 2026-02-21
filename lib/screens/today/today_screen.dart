@@ -222,13 +222,13 @@ class _TodayScreenState extends State<TodayScreen> {
           // Table header row
           Container(
             color: AppColors.dashboardSurface2,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
             child: Row(
               children: [
                 _headerCell('No', 32, TextAlign.center),
                 _headerCell('Number', 0, TextAlign.center, flex: true),
                 _headerCell('LSK', 72, TextAlign.center),
-                _headerCell('Count', 60, TextAlign.right),
+                _headerCell('Count', 64, TextAlign.right),
               ],
             ),
           ),
@@ -245,7 +245,7 @@ class _TodayScreenState extends State<TodayScreen> {
                     ? AppColors.dashboardBg
                     : AppColors.dashboardSurface.withOpacity(0.6),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 child: Row(
                   children: [
                     // No
@@ -304,7 +304,7 @@ class _TodayScreenState extends State<TodayScreen> {
                     ),
                     // Count
                     SizedBox(
-                      width: 60,
+                      width: 64,
                       child: Text(
                         '${entry.count}',
                         textAlign: TextAlign.right,
