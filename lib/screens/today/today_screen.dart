@@ -15,35 +15,31 @@ class _TodayEntry {
   final String number;
   final String lsk;
   final int count;
-  final double dAmt;
-  final double cAmt;
 
   const _TodayEntry({
     required this.no,
     required this.number,
     required this.lsk,
     required this.count,
-    required this.dAmt,
-    required this.cAmt,
   });
 }
 
 const List<_TodayEntry> _kMockEntries = [
-  _TodayEntry(no: 1,  number: '586', lsk: 'SUPER', count: 10,  dAmt: 90,   cAmt: 100),
-  _TodayEntry(no: 2,  number: '586', lsk: 'BOX',   count: 5,   dAmt: 270,  cAmt: 300),
-  _TodayEntry(no: 3,  number: '125', lsk: 'SUPER', count: 20,  dAmt: 180,  cAmt: 200),
-  _TodayEntry(no: 4,  number: '125', lsk: 'BOX',   count: 8,   dAmt: 432,  cAmt: 480),
-  _TodayEntry(no: 5,  number: '340', lsk: 'BOTH',  count: 15,  dAmt: 135,  cAmt: 150),
-  _TodayEntry(no: 6,  number: '77',  lsk: 'AB',    count: 12,  dAmt: 108,  cAmt: 120),
-  _TodayEntry(no: 7,  number: '77',  lsk: 'AC',    count: 6,   dAmt: 54,   cAmt: 60),
-  _TodayEntry(no: 8,  number: '99',  lsk: 'BC',    count: 25,  dAmt: 225,  cAmt: 250),
-  _TodayEntry(no: 9,  number: '5',   lsk: 'A',     count: 30,  dAmt: 270,  cAmt: 300),
-  _TodayEntry(no: 10, number: '5',   lsk: 'B',     count: 18,  dAmt: 162,  cAmt: 180),
-  _TodayEntry(no: 11, number: '3',   lsk: 'C',     count: 22,  dAmt: 198,  cAmt: 220),
-  _TodayEntry(no: 12, number: '812', lsk: 'BOX',   count: 4,   dAmt: 216,  cAmt: 240),
-  _TodayEntry(no: 13, number: '461', lsk: 'SUPER', count: 7,   dAmt: 63,   cAmt: 70),
-  _TodayEntry(no: 14, number: '23',  lsk: 'AB',    count: 9,   dAmt: 81,   cAmt: 90),
-  _TodayEntry(no: 15, number: '908', lsk: 'BOTH',  count: 11,  dAmt: 99,   cAmt: 110),
+  _TodayEntry(no: 1,  number: '586', lsk: 'SUPER', count: 10),
+  _TodayEntry(no: 2,  number: '586', lsk: 'BOX',   count: 5),
+  _TodayEntry(no: 3,  number: '125', lsk: 'SUPER', count: 20),
+  _TodayEntry(no: 4,  number: '125', lsk: 'BOX',   count: 8),
+  _TodayEntry(no: 5,  number: '340', lsk: 'BOTH',  count: 15),
+  _TodayEntry(no: 6,  number: '77',  lsk: 'AB',    count: 12),
+  _TodayEntry(no: 7,  number: '77',  lsk: 'AC',    count: 6),
+  _TodayEntry(no: 8,  number: '99',  lsk: 'BC',    count: 25),
+  _TodayEntry(no: 9,  number: '5',   lsk: 'A',     count: 30),
+  _TodayEntry(no: 10, number: '5',   lsk: 'B',     count: 18),
+  _TodayEntry(no: 11, number: '3',   lsk: 'C',     count: 22),
+  _TodayEntry(no: 12, number: '812', lsk: 'BOX',   count: 4),
+  _TodayEntry(no: 13, number: '461', lsk: 'SUPER', count: 7),
+  _TodayEntry(no: 14, number: '23',  lsk: 'AB',    count: 9),
+  _TodayEntry(no: 15, number: '908', lsk: 'BOTH',  count: 11),
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -108,22 +104,13 @@ class _TodayScreenState extends State<TodayScreen> {
     }).toList();
   }
 
-  double get _totalDAmount =>
-      _filteredEntries.fold(0, (sum, e) => sum + e.dAmt);
-  double get _totalCAmount =>
-      _filteredEntries.fold(0, (sum, e) => sum + e.cAmt);
   int get _totalCount =>
       _filteredEntries.fold(0, (sum, e) => sum + e.count);
 
   // Total for the summary header (uses all entries regardless of filter)
-  double get _grandTotalSales =>
-      _kMockEntries.fold(0, (sum, e) => sum + e.cAmt);
+  // TODO: Total sales amount comes from API (dealer-specific pricing)
   int get _grandTotalCount =>
       _kMockEntries.fold(0, (sum, e) => sum + e.count);
-  double get _grandTotalDAmount =>
-      _kMockEntries.fold(0, (sum, e) => sum + e.dAmt);
-  double get _grandTotalCAmount =>
-      _kMockEntries.fold(0, (sum, e) => sum + e.cAmt);
 
   Color _lskColor(String lsk) {
     switch (lsk.toUpperCase()) {
@@ -138,13 +125,6 @@ class _TodayScreenState extends State<TodayScreen> {
       case 'B':     return AppColors.lskB;
       default:      return AppColors.dashboardTextSub;
     }
-  }
-
-  String _formatAmount(double amt) {
-    if (amt == amt.truncateToDouble()) {
-      return amt.toInt().toString();
-    }
-    return amt.toStringAsFixed(2);
   }
 
   @override
@@ -176,10 +156,7 @@ class _TodayScreenState extends State<TodayScreen> {
           _SummaryCard(
             headerColors: headerColors,
             accentColor: accentColor,
-            totalSales: _grandTotalSales,
             totalCount: _grandTotalCount,
-            totalDAmount: _grandTotalDAmount,
-            totalCAmount: _grandTotalCAmount,
           ),
           // Filter bar
           _FilterBar(
@@ -201,8 +178,6 @@ class _TodayScreenState extends State<TodayScreen> {
           _FooterTotals(
             accentColor: accentColor,
             count: _totalCount,
-            dAmount: _totalDAmount,
-            cAmount: _totalCAmount,
           ),
         ],
       ),
@@ -252,11 +227,9 @@ class _TodayScreenState extends State<TodayScreen> {
             child: Row(
               children: [
                 _headerCell('No', 32, TextAlign.center),
-                _headerCell('Number', 60, TextAlign.center),
-                _headerCell('LSK', 56, TextAlign.center),
-                _headerCell('Count', 48, TextAlign.center),
-                _headerCell('D.Amt', 0, TextAlign.right, flex: true),
-                _headerCell('C.Amt', 0, TextAlign.right, flex: true),
+                _headerCell('Number', 0, TextAlign.center, flex: true),
+                _headerCell('LSK', 72, TextAlign.center),
+                _headerCell('Count', 60, TextAlign.right),
               ],
             ),
           ),
@@ -290,8 +263,7 @@ class _TodayScreenState extends State<TodayScreen> {
                       ),
                     ),
                     // Number
-                    SizedBox(
-                      width: 60,
+                    Expanded(
                       child: Text(
                         entry.number,
                         textAlign: TextAlign.center,
@@ -305,7 +277,7 @@ class _TodayScreenState extends State<TodayScreen> {
                     ),
                     // LSK
                     SizedBox(
-                      width: 56,
+                      width: 72,
                       child: Center(
                         child: Container(
                           padding: const EdgeInsets.symmetric(
@@ -333,39 +305,14 @@ class _TodayScreenState extends State<TodayScreen> {
                     ),
                     // Count
                     SizedBox(
-                      width: 48,
+                      width: 60,
                       child: Text(
                         '${entry.count}',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.dashboardTextSub,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    // D.Amt
-                    Expanded(
-                      child: Text(
-                        _formatAmount(entry.dAmt),
                         textAlign: TextAlign.right,
                         style: const TextStyle(
                           color: AppColors.dashboardTextSub,
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // C.Amt
-                    Expanded(
-                      child: Text(
-                        _formatAmount(entry.cAmt),
-                        textAlign: TextAlign.right,
-                        style: const TextStyle(
-                          color: AppColors.dashboardTextPrim,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -511,23 +458,13 @@ class _TodayHeader extends StatelessWidget {
 class _SummaryCard extends StatelessWidget {
   final List<Color> headerColors;
   final Color accentColor;
-  final double totalSales;
   final int totalCount;
-  final double totalDAmount;
-  final double totalCAmount;
 
   const _SummaryCard({
     required this.headerColors,
     required this.accentColor,
-    required this.totalSales,
     required this.totalCount,
-    required this.totalDAmount,
-    required this.totalCAmount,
   });
-
-  String _fmt(double v) => v == v.truncateToDouble()
-      ? v.toInt().toString()
-      : v.toStringAsFixed(2);
 
   @override
   Widget build(BuildContext context) {
@@ -547,6 +484,7 @@ class _SummaryCard extends StatelessWidget {
       ),
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Date row
           Row(
@@ -565,119 +503,36 @@ class _SummaryCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          // Total sales big number
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '₹${_fmt(totalSales)}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 36,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 5),
-                child: Text(
-                  'Total Sales',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.6),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
+          const SizedBox(height: 10),
+          // Total count big number
+          Text(
+            '$totalCount',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 40,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
           ),
-          const SizedBox(height: 14),
-          // Stat chips row
-          Row(
-            children: [
-              _StatChip(
-                label: 'Count',
-                value: '$totalCount',
-                accentColor: accentColor,
-              ),
-              const SizedBox(width: 10),
-              _StatChip(
-                label: 'D.Amount',
-                value: '₹${_fmt(totalDAmount)}',
-                accentColor: accentColor,
-              ),
-              const SizedBox(width: 10),
-              _StatChip(
-                label: 'C.Amount',
-                value: '₹${_fmt(totalCAmount)}',
-                accentColor: accentColor,
-              ),
-            ],
+          Text(
+            'Total Entries',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.6),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
     );
   }
 
-  String _weekday(int d) => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d - 1];
+  String _weekday(int d) =>
+      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d - 1];
   String _month(int m) => [
         'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
       ][m - 1];
-}
-
-class _StatChip extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color accentColor;
-
-  const _StatChip({
-    required this.label,
-    required this.value,
-    required this.accentColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.15),
-            width: 1,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.55),
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.3,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -979,19 +834,11 @@ class _DigitTab extends StatelessWidget {
 class _FooterTotals extends StatelessWidget {
   final Color accentColor;
   final int count;
-  final double dAmount;
-  final double cAmount;
 
   const _FooterTotals({
     required this.accentColor,
     required this.count,
-    required this.dAmount,
-    required this.cAmount,
   });
-
-  String _fmt(double v) => v == v.truncateToDouble()
-      ? v.toInt().toString()
-      : v.toStringAsFixed(2);
 
   @override
   Widget build(BuildContext context) {
@@ -1009,29 +856,16 @@ class _FooterTotals extends StatelessWidget {
         MediaQuery.of(context).padding.bottom + 10,
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _FooterStat(label: 'COUNT', value: '$count', accentColor: accentColor),
-          _vDivider(),
           _FooterStat(
-              label: 'D.AMOUNT',
-              value: '₹${_fmt(dAmount)}',
-              accentColor: accentColor),
-          _vDivider(),
-          _FooterStat(
-              label: 'C.AMOUNT',
-              value: '₹${_fmt(cAmount)}',
+              label: 'TOTAL COUNT',
+              value: '$count',
               accentColor: accentColor),
         ],
       ),
     );
   }
-
-  Widget _vDivider() => Container(
-        width: 1,
-        height: 28,
-        margin: const EdgeInsets.symmetric(horizontal: 12),
-        color: AppColors.dashboardBorder,
-      );
 }
 
 class _FooterStat extends StatelessWidget {
