@@ -157,6 +157,10 @@ class _TodayScreenState extends State<TodayScreen> {
             headerColors: headerColors,
             accentColor: accentColor,
             totalCount: _grandTotalCount,
+            filteredCount: _totalCount,
+            isFiltered: _selectedDigit != 0 ||
+                _selectedLsk != 'ALL' ||
+                _searchQuery.isNotEmpty,
           ),
           // Filter bar
           _FilterBar(
@@ -173,11 +177,6 @@ class _TodayScreenState extends State<TodayScreen> {
             child: filtered.isEmpty
                 ? _buildEmptyState(accentColor)
                 : _buildTable(filtered, accentColor),
-          ),
-          // Footer totals
-          _FooterTotals(
-            accentColor: accentColor,
-            count: _totalCount,
           ),
         ],
       ),
@@ -459,11 +458,15 @@ class _SummaryCard extends StatelessWidget {
   final List<Color> headerColors;
   final Color accentColor;
   final int totalCount;
+  final int filteredCount;
+  final bool isFiltered;
 
   const _SummaryCard({
     required this.headerColors,
     required this.accentColor,
     required this.totalCount,
+    required this.filteredCount,
+    required this.isFiltered,
   });
 
   @override
@@ -482,46 +485,93 @@ class _SummaryCard extends StatelessWidget {
               : [headerColors[0], headerColors[0]],
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Date row
-          Row(
-            children: [
-              const Icon(Icons.calendar_today_rounded,
-                  color: Colors.white54, size: 12),
-              const SizedBox(width: 6),
-              Text(
-                dateStr,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.65),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.3,
+          // Left — date + big count
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_today_rounded,
+                        color: Colors.white54, size: 11),
+                    const SizedBox(width: 5),
+                    Text(
+                      dateStr,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.6),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '$totalCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 44,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -1,
+                    height: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Total Entries Today',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.55),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Right — filtered count chip, only shown when a filter is active
+          if (isFiltered)
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.22),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.18),
+                  width: 1,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // Total count big number
-          Text(
-            '$totalCount',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 40,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    '$filteredCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      height: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Filtered',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.55),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Text(
-            'Total Entries',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
         ],
       ),
     );
@@ -827,85 +877,3 @@ class _DigitTab extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FOOTER TOTALS
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _FooterTotals extends StatelessWidget {
-  final Color accentColor;
-  final int count;
-
-  const _FooterTotals({
-    required this.accentColor,
-    required this.count,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.dashboardSurface,
-        border: Border(
-          top: BorderSide(color: AppColors.dashboardBorder, width: 1),
-        ),
-      ),
-      padding: EdgeInsets.fromLTRB(
-        16,
-        10,
-        16,
-        MediaQuery.of(context).padding.bottom + 10,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _FooterStat(
-              label: 'TOTAL COUNT',
-              value: '$count',
-              accentColor: accentColor),
-        ],
-      ),
-    );
-  }
-}
-
-class _FooterStat extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color accentColor;
-
-  const _FooterStat({
-    required this.label,
-    required this.value,
-    required this.accentColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.dashboardTextDim,
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: TextStyle(
-              color: accentColor,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
