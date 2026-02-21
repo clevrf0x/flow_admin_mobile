@@ -225,10 +225,9 @@ class _TodayScreenState extends State<TodayScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
             child: Row(
               children: [
-                _headerCell('No', 32, TextAlign.center),
                 _headerCell('Number', 0, TextAlign.center, flex: true),
                 _headerCell('LSK', 72, TextAlign.center),
-                _headerCell('Count', 64, TextAlign.right),
+                _headerCell('Count', 72, TextAlign.center),
               ],
             ),
           ),
@@ -248,19 +247,6 @@ class _TodayScreenState extends State<TodayScreen> {
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 child: Row(
                   children: [
-                    // No
-                    SizedBox(
-                      width: 32,
-                      child: Text(
-                        '${entry.no}',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.dashboardTextDim,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
                     // Number
                     Expanded(
                       child: Text(
@@ -304,10 +290,10 @@ class _TodayScreenState extends State<TodayScreen> {
                     ),
                     // Count
                     SizedBox(
-                      width: 64,
+                      width: 72,
                       child: Text(
                         '${entry.count}',
-                        textAlign: TextAlign.right,
+                        textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: AppColors.dashboardTextSub,
                           fontSize: 12,
