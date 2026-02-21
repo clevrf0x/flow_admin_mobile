@@ -475,6 +475,12 @@ class _MenuRow extends StatelessWidget {
             );
             return;
           }
+          if (item.id == 'daily_report') {
+            context.go(
+              '/dashboard/$gameId/daily-report?gameName=${Uri.encodeComponent(gameName)}',
+            );
+            return;
+          }
           // TODO: Navigate to item.route
         },
         highlightColor: accentColor.withOpacity(0.06),
