@@ -7,6 +7,9 @@ import '../../constants/app_colors.dart';
 import '../../models/game.dart';
 import '../../widgets/common_toast.dart';
 
+// Number of complimentary prize fields
+const int _kCompCount = 30;
+
 class AddResultsScreen extends StatefulWidget {
   final String gameId;
   final String gameName;
@@ -23,13 +26,28 @@ class AddResultsScreen extends StatefulWidget {
 
 class _AddResultsScreenState extends State<AddResultsScreen> {
   DateTime _selectedDate = DateTime.now();
-  final TextEditingController _resultController = TextEditingController();
-  final FocusNode _resultFocus = FocusNode();
 
-  // TODO: Replace with API response
-  final List<String> _addedResults = [];
+  // 5 main prize controllers
+  final List<TextEditingController> _mainControllers =
+      List.generate(5, (_) => TextEditingController());
+  final List<FocusNode> _mainFocusNodes =
+      List.generate(5, (_) => FocusNode());
+
+  // 30 complimentary prize controllers
+  final List<TextEditingController> _compControllers =
+      List.generate(_kCompCount, (_) => TextEditingController());
+  final List<FocusNode> _compFocusNodes =
+      List.generate(_kCompCount, (_) => FocusNode());
 
   bool _isSaving = false;
+
+  static const List<String> _mainLabels = [
+    'First Prize',
+    'Second Prize',
+    'Third Prize',
+    'Fourth Prize',
+    'Fifth Prize',
+  ];
 
   Game? get _game {
     try {
@@ -47,87 +65,68 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
 
   @override
   void dispose() {
-    _resultController.dispose();
-    _resultFocus.dispose();
+    for (final c in _mainControllers) c.dispose();
+    for (final f in _mainFocusNodes) f.dispose();
+    for (final c in _compControllers) c.dispose();
+    for (final f in _compFocusNodes) f.dispose();
     super.dispose();
   }
 
   Future<void> _pickDate() async {
+    final game = _game;
+    final accentColor = _resolvedAccentColor(
+      game?.gradientColors ?? [AppColors.primaryBlue],
+    );
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
-      builder: (context, child) {
-        final game = _game;
-        final accentColor = _resolvedAccentColor(
-          game?.gradientColors ?? [AppColors.primaryBlue],
-        );
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: ColorScheme.dark(
-              primary: accentColor,
-              onPrimary: Colors.white,
-              surface: AppColors.dashboardSurface,
-              onSurface: AppColors.dashboardTextPrim,
-            ),
-            dialogBackgroundColor: AppColors.dashboardSurface,
+      builder: (context, child) => Theme(
+        data: ThemeData.dark().copyWith(
+          colorScheme: ColorScheme.dark(
+            primary: accentColor,
+            onPrimary: Colors.white,
+            surface: AppColors.dashboardSurface,
+            onSurface: AppColors.dashboardTextPrim,
           ),
-          child: child!,
-        );
-      },
+          dialogBackgroundColor: AppColors.dashboardSurface,
+        ),
+        child: child!,
+      ),
     );
-    if (picked != null) {
-      setState(() => _selectedDate = picked);
-    }
+    if (picked != null) setState(() => _selectedDate = picked);
   }
 
-  Future<void> _handleAddResult() async {
-    final value = _resultController.text.trim();
-    if (value.isEmpty) {
-      CommonToast.showError(context, 'Please enter a result number.');
+  Future<void> _handleSave() async {
+    // Validate — at least first prize must be filled
+    if (_mainControllers[0].text.trim().isEmpty) {
+      CommonToast.showError(context, 'First Prize number is required.');
       return;
     }
 
     setState(() => _isSaving = true);
 
-    // TODO: API call to save result for _selectedDate
-    await Future.delayed(const Duration(milliseconds: 600));
+    // TODO: API call — send _selectedDate, main prizes, comp prizes
+    await Future.delayed(const Duration(milliseconds: 800));
 
     if (!mounted) return;
-
-    setState(() {
-      _addedResults.add(value);
-      _resultController.clear();
-      _isSaving = false;
-    });
-
-    _resultFocus.unfocus();
+    setState(() => _isSaving = false);
 
     final game = _game;
     CommonToast.show(
       context,
-      message: 'Result "$value" added successfully',
+      message: 'Results saved for ${_formatDate(_selectedDate)}',
       type: ToastType.success,
       gradientColors: game?.gradientColors ??
           [AppColors.primaryBlue, AppColors.primaryBlueDark],
     );
   }
 
-  Future<void> _handleDelete(int index) async {
-    final value = _addedResults[index];
-
-    // TODO: API call to delete result
-    setState(() => _addedResults.removeAt(index));
-
-    CommonToast.showInfo(context, 'Result "$value" removed.');
-  }
-
   String _formatDate(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    final year = date.year.toString();
-    return '$day-$month-$year';
+    final d = date.day.toString().padLeft(2, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    return '$d-$m-${date.year}';
   }
 
   @override
@@ -151,33 +150,50 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
         backgroundColor: AppColors.dashboardBg,
         body: Column(
           children: [
-            // Header
             _AddResultsHeader(
               gameName: widget.gameName,
               gameId: widget.gameId,
               headerColors: headerColors,
             ),
-            // Scrollable body
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(14, 18, 14, 28),
                 children: [
-                  // Date picker row
+                  // Date picker
                   _buildDateRow(accentColor),
                   const SizedBox(height: 16),
-                  // Result input card
-                  _buildInputCard(accentColor),
-                  // Results list (only shown when entries exist)
-                  if (_addedResults.isNotEmpty) ...[
-                    const SizedBox(height: 20),
-                    _buildResultsList(accentColor),
-                  ],
+                  // Main prizes card
+                  _buildSectionLabel('MAIN PRIZES'),
+                  const SizedBox(height: 8),
+                  _buildMainPrizesCard(accentColor),
+                  const SizedBox(height: 20),
+                  // Complimentary prizes card
+                  _buildSectionLabel('COMPLIMENTARY PRIZES'),
+                  const SizedBox(height: 8),
+                  _buildCompPrizesCard(accentColor),
                 ],
               ),
             ),
-            // Add Result button
-            _buildAddButton(headerColors),
+            // Save button
+            _buildSaveButton(headerColors),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ── Section label ────────────────────────────────────────────────────────
+
+  Widget _buildSectionLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.dashboardTextDim,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 2.0,
         ),
       ),
     );
@@ -197,7 +213,6 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            // Icon box
             Container(
               width: 38,
               height: 38,
@@ -206,25 +221,20 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: accentColor.withOpacity(0.22)),
               ),
-              child: Icon(
-                Icons.calendar_month_rounded,
-                color: accentColor,
-                size: 18,
-              ),
+              child: Icon(Icons.calendar_month_rounded,
+                  color: accentColor, size: 18),
             ),
             const SizedBox(width: 14),
-            // Label + date
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Draw Date',
-                    style: const TextStyle(
+                  const Text(
+                    'Win Date',
+                    style: TextStyle(
                       color: AppColors.dashboardTextSub,
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
-                      letterSpacing: 0.2,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -240,7 +250,6 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
                 ],
               ),
             ),
-            // Tap hint
             Text(
               'Change',
               style: TextStyle(
@@ -250,86 +259,156 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
               ),
             ),
             const SizedBox(width: 4),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.dashboardTextDim,
-              size: 18,
-            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: AppColors.dashboardTextDim, size: 18),
           ],
         ),
       ),
     );
   }
 
-  // ── Result input card ────────────────────────────────────────────────────
+  // ── Main prizes card (5 rows) ────────────────────────────────────────────
 
-  Widget _buildInputCard(Color accentColor) {
+  Widget _buildMainPrizesCard(Color accentColor) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.dashboardSurface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.dashboardBorder),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Section label
-          Text(
-            'RESULT NUMBER',
-            style: const TextStyle(
-              color: AppColors.dashboardTextDim,
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 2.0,
+          for (int i = 0; i < 5; i++) ...[
+            _buildMainPrizeRow(
+              index: i,
+              label: _mainLabels[i],
+              controller: _mainControllers[i],
+              focusNode: _mainFocusNodes[i],
+              nextFocus: i < 4 ? _mainFocusNodes[i + 1] : _compFocusNodes[0],
+              accentColor: accentColor,
+              isFirst: i == 0,
+            ),
+            if (i < 4)
+              Container(
+                height: 1,
+                margin: const EdgeInsets.only(left: 68),
+                color: AppColors.dashboardBorder,
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainPrizeRow({
+    required int index,
+    required String label,
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required FocusNode nextFocus,
+    required Color accentColor,
+    bool isFirst = false,
+  }) {
+    // First prize gets a slightly highlighted treatment
+    final isTop = index == 0;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          // Prize badge
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: isTop
+                  ? accentColor.withOpacity(0.22)
+                  : accentColor.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isTop
+                    ? accentColor.withOpacity(0.45)
+                    : accentColor.withOpacity(0.18),
+              ),
+            ),
+            child: Center(
+              child: Text(
+                '${index + 1}',
+                style: TextStyle(
+                  color: accentColor,
+                  fontSize: isTop ? 16 : 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          // Input field
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.dashboardBg,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.dashboardBorder),
+          const SizedBox(width: 14),
+          // Label
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: isTop
+                        ? AppColors.dashboardTextPrim
+                        : AppColors.dashboardTextSub,
+                    fontSize: isTop ? 13 : 12,
+                    fontWeight:
+                        isTop ? FontWeight.w600 : FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
+          ),
+          // Number input — right-aligned, compact
+          SizedBox(
+            width: 90,
             child: TextField(
-              controller: _resultController,
-              focusNode: _resultFocus,
+              controller: controller,
+              focusNode: focusNode,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               textAlign: TextAlign.center,
+              textInputAction: TextInputAction.next,
+              onEditingComplete: () =>
+                  FocusScope.of(context).requestFocus(nextFocus),
               style: TextStyle(
                 color: accentColor,
-                fontSize: 32,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 6,
+                fontSize: isTop ? 22 : 18,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2,
               ),
               decoration: InputDecoration(
-                border: InputBorder.none,
+                isDense: true,
                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 18,
+                    horizontal: 8, vertical: 8),
+                border: UnderlineInputBorder(
+                  borderSide: BorderSide(
+                    color: AppColors.dashboardBorder,
+                    width: 1.5,
+                  ),
                 ),
-                hintText: '—',
-                hintStyle: TextStyle(
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(
+                    color: AppColors.dashboardBorder,
+                    width: 1.5,
+                  ),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(
+                    color: accentColor,
+                    width: 2,
+                  ),
+                ),
+                hintText: '000',
+                hintStyle: const TextStyle(
                   color: AppColors.dashboardTextDim,
-                  fontSize: 32,
-                  fontWeight: FontWeight.w300,
-                  letterSpacing: 6,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 2,
                 ),
-              ),
-              onSubmitted: (_) => _handleAddResult(),
-            ),
-          ),
-          const SizedBox(height: 10),
-          // Helper text
-          Center(
-            child: Text(
-              'Enter the winning number for ${_formatDate(_selectedDate)}',
-              style: const TextStyle(
-                color: AppColors.dashboardTextDim,
-                fontSize: 11,
-                fontWeight: FontWeight.w400,
               ),
             ),
           ),
@@ -338,63 +417,114 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
     );
   }
 
-  // ── Added results list ───────────────────────────────────────────────────
+  // ── Complimentary prizes card (5-column grid of 30) ───────────────────────
 
-  Widget _buildResultsList(Color accentColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section header
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            'ADDED RESULTS',
-            style: const TextStyle(
-              color: AppColors.dashboardTextDim,
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 2.0,
+  Widget _buildCompPrizesCard(Color accentColor) {
+    const cols = 5;
+    final rows = (_kCompCount / cols).ceil();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.dashboardSurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.dashboardBorder),
+      ),
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 16),
+      child: Column(
+        children: [
+          for (int row = 0; row < rows; row++) ...[
+            if (row > 0) const SizedBox(height: 10),
+            Row(
+              children: [
+                for (int col = 0; col < cols; col++) ...[
+                  if (col > 0) const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildCompCell(
+                      index: row * cols + col,
+                      accentColor: accentColor,
+                    ),
+                  ),
+                ],
+              ],
             ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompCell({required int index, required Color accentColor}) {
+    if (index >= _kCompCount) return const SizedBox.shrink();
+
+    final isLast = index == _kCompCount - 1;
+    final nextNode = isLast ? null : _compFocusNodes[index + 1];
+
+    return Column(
+      children: [
+        // Cell number label
+        Text(
+          '${index + 1}',
+          style: const TextStyle(
+            color: AppColors.dashboardTextDim,
+            fontSize: 9,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
           ),
         ),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.dashboardSurface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.dashboardBorder),
+        const SizedBox(height: 4),
+        // Input
+        TextField(
+          controller: _compControllers[index],
+          focusNode: _compFocusNodes[index],
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          textAlign: TextAlign.center,
+          textInputAction:
+              isLast ? TextInputAction.done : TextInputAction.next,
+          onEditingComplete: nextNode != null
+              ? () => FocusScope.of(context).requestFocus(nextNode)
+              : () => FocusScope.of(context).unfocus(),
+          style: TextStyle(
+            color: accentColor,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1,
           ),
-          child: Column(
-            children: [
-              for (int i = 0; i < _addedResults.length; i++) ...[
-                _ResultRow(
-                  index: i,
-                  value: _addedResults[i],
-                  accentColor: accentColor,
-                  onDelete: () => _handleDelete(i),
-                ),
-                if (i < _addedResults.length - 1)
-                  Container(
-                    height: 1,
-                    margin: const EdgeInsets.only(left: 68),
-                    color: AppColors.dashboardBorder,
-                  ),
-              ],
-            ],
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+            border: UnderlineInputBorder(
+              borderSide: BorderSide(
+                  color: AppColors.dashboardBorder, width: 1),
+            ),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                  color: AppColors.dashboardBorder, width: 1),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: accentColor, width: 1.5),
+            ),
+            hintText: '—',
+            hintStyle: const TextStyle(
+              color: AppColors.dashboardTextDim,
+              fontSize: 13,
+              fontWeight: FontWeight.w300,
+            ),
           ),
         ),
       ],
     );
   }
 
-  // ── Add button ───────────────────────────────────────────────────────────
+  // ── Save button ──────────────────────────────────────────────────────────
 
-  Widget _buildAddButton(List<Color> headerColors) {
+  Widget _buildSaveButton(List<Color> headerColors) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.dashboardSurface,
         border: Border(
-          top: BorderSide(color: AppColors.dashboardBorder, width: 1),
-        ),
+            top: BorderSide(color: AppColors.dashboardBorder, width: 1)),
       ),
       padding: EdgeInsets.fromLTRB(
         16,
@@ -406,7 +536,7 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
-          onTap: _isSaving ? null : _handleAddResult,
+          onTap: _isSaving ? null : _handleSave,
           borderRadius: BorderRadius.circular(12),
           child: Ink(
             decoration: BoxDecoration(
@@ -435,11 +565,11 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
                   : const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_rounded,
-                            color: Colors.white, size: 20),
+                        Icon(Icons.save_rounded,
+                            color: Colors.white, size: 18),
                         SizedBox(width: 8),
                         Text(
-                          'Add Result',
+                          'Save Results',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 15,
@@ -452,87 +582,6 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RESULT ROW
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ResultRow extends StatelessWidget {
-  final int index;
-  final String value;
-  final Color accentColor;
-  final VoidCallback onDelete;
-
-  const _ResultRow({
-    required this.index,
-    required this.value,
-    required this.accentColor,
-    required this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-      child: Row(
-        children: [
-          // Index badge
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: accentColor.withOpacity(0.13),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: accentColor.withOpacity(0.22)),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '${index + 1}',
-              style: TextStyle(
-                color: accentColor,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          // Result number
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                color: AppColors.dashboardTextPrim,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 2,
-              ),
-            ),
-          ),
-          // Delete button
-          GestureDetector(
-            onTap: onDelete,
-            child: Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: AppColors.dashboardLogout.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(9),
-                border: Border.all(
-                  color: AppColors.dashboardLogout.withOpacity(0.25),
-                ),
-              ),
-              child: Icon(
-                Icons.delete_outline_rounded,
-                color: AppColors.dashboardLogout.withOpacity(0.8),
-                size: 17,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -572,7 +621,6 @@ class _AddResultsHeader extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // ← Back to dashboard
             Material(
               color: Colors.transparent,
               child: InkWell(
@@ -602,7 +650,6 @@ class _AddResultsHeader extends StatelessWidget {
                 ),
               ),
             ),
-            // Title
             const Expanded(
               child: Text(
                 'Add Results',
@@ -615,7 +662,6 @@ class _AddResultsHeader extends StatelessWidget {
                 ),
               ),
             ),
-            // Home button
             Material(
               color: Colors.transparent,
               child: InkWell(
@@ -628,9 +674,7 @@ class _AddResultsHeader extends StatelessWidget {
                     color: Colors.white.withOpacity(0.22),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.35),
-                      width: 1,
-                    ),
+                        color: Colors.white.withOpacity(0.35), width: 1),
                   ),
                   child: const Icon(Icons.home_rounded,
                       color: Colors.white, size: 18),
