@@ -469,6 +469,12 @@ class _MenuRow extends StatelessWidget {
             );
             return;
           }
+          if (item.id == 'add_results') {
+            context.go(
+              '/dashboard/$gameId/add-results?gameName=${Uri.encodeComponent(gameName)}',
+            );
+            return;
+          }
           // TODO: Navigate to item.route
         },
         highlightColor: accentColor.withOpacity(0.06),
