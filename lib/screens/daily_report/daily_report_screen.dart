@@ -95,8 +95,10 @@ class DailyReportScreen extends StatefulWidget {
 
 class _DailyReportScreenState extends State<DailyReportScreen> {
   String _selectedDealer = 'All Dealers';
-  DateTime _fromDate = DateTime.now().subtract(const Duration(days: 6));
-  DateTime _toDate = DateTime.now();
+  // Default range spans the mock data so the table is visible immediately.
+  // TODO: Reset to DateTime.now() window once API is wired.
+  DateTime _fromDate = DateTime(2025, 2, 16);
+  DateTime _toDate = DateTime(2025, 2, 22);
   String _selectedLsk = 'ALL';
 
   Game? get _game {
@@ -181,6 +183,10 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
 
   String _fmtDateShort(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  /// Formats a balance with explicit +/- sign.
+  String _fmtBalance(double v) =>
+      v >= 0 ? '+${v.toStringAsFixed(0)}' : v.toStringAsFixed(0);
 
   // ── Dealer picker ─────────────────────────────────────────────────────────
 
@@ -378,7 +384,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               const SizedBox(width: 8),
               _StatBox(
                 label: 'Balance',
-                value: _totalBalance.toStringAsFixed(0),
+                value: _fmtBalance(_totalBalance),
                 accentColor: _totalBalance >= 0
                     ? AppColors.lskBox
                     : AppColors.dashboardLogout,
@@ -533,7 +539,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                     Expanded(
                       flex: 2,
                       child: Text(
-                        bal.toStringAsFixed(0),
+                        _fmtBalance(bal),
                         textAlign: TextAlign.right,
                         style: TextStyle(
                           color: bal >= 0
@@ -601,7 +607,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               Expanded(
                 flex: 2,
                 child: Text(
-                  totBal.toStringAsFixed(0),
+                  _fmtBalance(totBal),
                   textAlign: TextAlign.right,
                   style: TextStyle(
                     color: totBal >= 0
