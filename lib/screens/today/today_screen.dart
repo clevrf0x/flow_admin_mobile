@@ -833,73 +833,93 @@ class _FilterBar extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.dashboardSurface,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.dashboardBorder,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Filter by LSK Type',
-            style: TextStyle(
-              color: AppColors.dashboardTextPrim,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          for (final lsk in _lskOptions)
-            InkWell(
-              onTap: () {
-                onLskChanged(lsk);
-                Navigator.of(context).pop();
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 14),
+      builder: (ctx) {
+        final maxHeight = MediaQuery.of(ctx).size.height * 0.6;
+        final bottomPad = MediaQuery.of(ctx).padding.bottom;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle + title — fixed, never scrolls
+              const SizedBox(height: 12),
+              Container(
+                width: 36,
+                height: 4,
                 decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                        color: AppColors.dashboardBorder, width: 1),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      lsk,
-                      style: TextStyle(
-                        color: lsk == selectedLsk
-                            ? accentColor
-                            : AppColors.dashboardTextPrim,
-                        fontSize: 13,
-                        fontWeight: lsk == selectedLsk
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                      ),
-                    ),
-                    if (lsk == selectedLsk) ...[
-                      const Spacer(),
-                      Icon(Icons.check_rounded,
-                          color: accentColor, size: 16),
-                    ],
-                  ],
+                  color: AppColors.dashboardBorder,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-            ),
-          SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
-        ],
-      ),
+              const SizedBox(height: 12),
+              const Text(
+                'Filter by LSK Type',
+                style: TextStyle(
+                  color: AppColors.dashboardTextPrim,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Scrollable list
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final lsk in _lskOptions)
+                        InkWell(
+                          onTap: () {
+                            onLskChanged(lsk);
+                            Navigator.of(ctx).pop();
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 14),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                    color: AppColors.dashboardBorder,
+                                    width: 1),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Text(
+                                  lsk,
+                                  style: TextStyle(
+                                    color: lsk == selectedLsk
+                                        ? accentColor
+                                        : AppColors.dashboardTextPrim,
+                                    fontSize: 13,
+                                    fontWeight: lsk == selectedLsk
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                  ),
+                                ),
+                                if (lsk == selectedLsk) ...[
+                                  const Spacer(),
+                                  Icon(Icons.check_rounded,
+                                      color: accentColor, size: 16),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      SizedBox(height: bottomPad + 8),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
