@@ -99,9 +99,10 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
   }
 
   Future<void> _handleSave() async {
-    // Validate — at least first prize must be filled
-    if (_mainControllers[0].text.trim().isEmpty) {
-      CommonToast.showError(context, 'First Prize number is required.');
+    // Validate — first prize must be exactly 3 digits
+    final firstPrize = _mainControllers[0].text.trim();
+    if (firstPrize.length != 3) {
+      CommonToast.showError(context, 'First Prize must be exactly 3 digits.');
       return;
     }
 
@@ -369,7 +370,11 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
               controller: controller,
               focusNode: focusNode,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(3),
+              ],
+              maxLength: 3,
               textAlign: TextAlign.center,
               textInputAction: TextInputAction.next,
               onEditingComplete: () =>
@@ -382,6 +387,7 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
               ),
               decoration: InputDecoration(
                 isDense: true,
+                counterText: '',
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: 8, vertical: 8),
                 border: UnderlineInputBorder(
@@ -477,7 +483,11 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
           controller: _compControllers[index],
           focusNode: _compFocusNodes[index],
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(3),
+          ],
+          maxLength: 3,
           textAlign: TextAlign.center,
           textInputAction:
               isLast ? TextInputAction.done : TextInputAction.next,
@@ -492,6 +502,7 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
           ),
           decoration: InputDecoration(
             isDense: true,
+            counterText: '',
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
             border: UnderlineInputBorder(
