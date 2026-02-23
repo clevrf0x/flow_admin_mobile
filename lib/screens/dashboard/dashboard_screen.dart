@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../constants/app_colors.dart';
 import '../../models/game.dart';
 import '../../models/dashboard_menu_item.dart';
+import '../../services/storage_service.dart';
 
 class DashboardScreen extends StatelessWidget {
   final String gameId;
@@ -291,9 +292,10 @@ class _HeaderLogoutButton extends StatelessWidget {
             ),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
-              context.go('/login');
+              await StorageService.clearAll();
+              if (context.mounted) context.go('/login');
             },
             child: const Text(
               'Logout',

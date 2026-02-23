@@ -45,35 +45,31 @@ const List<String> _kDealers = [
   'Ambadi',
 ];
 
-// LSK types for filter modal
-const List<String> _kAllLsk = [
-  'ALL', 'SUPER', 'BOX', 'BOTH', 'AB', 'AC', 'BC', 'A', 'B', 'C',
-];
-
 // Mock report rows — TODO: Replace with API call
 // Each row = one dealer's summary for one date
-final List<_DailyRow> _kMockRows = [
-  _DailyRow(date: DateTime(2025, 2, 16), dealer: 'Kurukkan',  tSale: 4500,  tWin: 1200),
-  _DailyRow(date: DateTime(2025, 2, 16), dealer: 'BLT',       tSale: 3200,  tWin: 800),
-  _DailyRow(date: DateTime(2025, 2, 16), dealer: 'KTA',       tSale: 5100,  tWin: 2300),
-  _DailyRow(date: DateTime(2025, 2, 16), dealer: 'SJ',        tSale: 2800,  tWin: 400),
-  _DailyRow(date: DateTime(2025, 2, 17), dealer: 'Kurukkan',  tSale: 4100,  tWin: 950),
-  _DailyRow(date: DateTime(2025, 2, 17), dealer: 'BLT',       tSale: 3700,  tWin: 1100),
-  _DailyRow(date: DateTime(2025, 2, 17), dealer: 'RANADEV',   tSale: 6200,  tWin: 3100),
-  _DailyRow(date: DateTime(2025, 2, 17), dealer: 'AJAYAN',    tSale: 1900,  tWin: 0),
-  _DailyRow(date: DateTime(2025, 2, 18), dealer: 'SELF',      tSale: 7800,  tWin: 2200),
-  _DailyRow(date: DateTime(2025, 2, 18), dealer: 'Kurukkan',  tSale: 3900,  tWin: 1600),
-  _DailyRow(date: DateTime(2025, 2, 18), dealer: 'KTA',       tSale: 4400,  tWin: 900),
-  _DailyRow(date: DateTime(2025, 2, 19), dealer: 'BLT',       tSale: 2600,  tWin: 700),
-  _DailyRow(date: DateTime(2025, 2, 19), dealer: 'PATHRAM',   tSale: 5500,  tWin: 1800),
-  _DailyRow(date: DateTime(2025, 2, 19), dealer: 'SALEEMV',   tSale: 3300,  tWin: 550),
-  _DailyRow(date: DateTime(2025, 2, 20), dealer: 'Kurukkan',  tSale: 4800,  tWin: 2100),
-  _DailyRow(date: DateTime(2025, 2, 20), dealer: 'AJAYAN',    tSale: 2100,  tWin: 300),
-  _DailyRow(date: DateTime(2025, 2, 20), dealer: 'TB',        tSale: 3600,  tWin: 1400),
-  _DailyRow(date: DateTime(2025, 2, 21), dealer: 'Anas',      tSale: 4200,  tWin: 1900),
-  _DailyRow(date: DateTime(2025, 2, 21), dealer: 'Ambadi',    tSale: 3100,  tWin: 600),
-  _DailyRow(date: DateTime(2025, 2, 22), dealer: 'Kurukkan',  tSale: 5000,  tWin: 1700),
-];
+// Uses today + yesterday so the table is visible with default date range.
+final List<_DailyRow> _kMockRows = () {
+  final today = DateTime.now();
+  final yesterday = today.subtract(const Duration(days: 1));
+  return [
+    // Yesterday entries
+    _DailyRow(date: yesterday, dealer: 'Kurukkan',  tSale: 4500,  tWin: 1200),
+    _DailyRow(date: yesterday, dealer: 'BLT',       tSale: 3200,  tWin: 800),
+    _DailyRow(date: yesterday, dealer: 'KTA',       tSale: 5100,  tWin: 2300),
+    _DailyRow(date: yesterday, dealer: 'SJ',        tSale: 2800,  tWin: 400),
+    _DailyRow(date: yesterday, dealer: 'RANADEV',   tSale: 6200,  tWin: 3100),
+    _DailyRow(date: yesterday, dealer: 'AJAYAN',    tSale: 1900,  tWin: 0),
+    _DailyRow(date: yesterday, dealer: 'SELF',      tSale: 7800,  tWin: 2200),
+    // Today entries
+    _DailyRow(date: today, dealer: 'Kurukkan',  tSale: 3900,  tWin: 1600),
+    _DailyRow(date: today, dealer: 'BLT',       tSale: 2600,  tWin: 700),
+    _DailyRow(date: today, dealer: 'KTA',       tSale: 4400,  tWin: 900),
+    _DailyRow(date: today, dealer: 'PATHRAM',   tSale: 5500,  tWin: 1800),
+    _DailyRow(date: today, dealer: 'SALEEMV',   tSale: 3300,  tWin: 550),
+    _DailyRow(date: today, dealer: 'Anas',      tSale: 4200,  tWin: 1900),
+    _DailyRow(date: today, dealer: 'Ambadi',    tSale: 3100,  tWin: 600),
+  ];
+}();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SCREEN
@@ -95,11 +91,19 @@ class DailyReportScreen extends StatefulWidget {
 
 class _DailyReportScreenState extends State<DailyReportScreen> {
   String _selectedDealer = 'All Dealers';
-  // Default range spans the mock data so the table is visible immediately.
-  // TODO: Reset to DateTime.now() window once API is wired.
-  DateTime _fromDate = DateTime(2025, 2, 16);
-  DateTime _toDate = DateTime(2025, 2, 22);
-  String _selectedLsk = 'ALL';
+  // Default dates = today (both FROM and TO)
+  late DateTime _fromDate;
+  late DateTime _toDate;
+  // Game type selector — 'All Games' means no filter
+  String _selectedGameId = 'All Games';
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _fromDate = DateTime(now.year, now.month, now.day);
+    _toDate   = DateTime(now.year, now.month, now.day);
+  }
 
   Game? get _game {
     try {
@@ -118,20 +122,20 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   // ── Filtered rows ─────────────────────────────────────────────────────────
 
   List<_DailyRow> get _filteredRows {
-    // TODO: API call — fetch rows filtered by dealer, date range, lsk type
+    // TODO: API call — fetch rows filtered by dealer, date range, game type
     return _kMockRows.where((r) {
       // Dealer filter
       if (_selectedDealer != 'All Dealers' && r.dealer != _selectedDealer) {
         return false;
       }
       // Date range filter
-      final d = DateTime(r.date.year, r.date.month, r.date.day);
+      final d    = DateTime(r.date.year, r.date.month, r.date.day);
       final from = DateTime(_fromDate.year, _fromDate.month, _fromDate.day);
-      final to = DateTime(_toDate.year, _toDate.month, _toDate.day);
+      final to   = DateTime(_toDate.year, _toDate.month, _toDate.day);
       if (d.isBefore(from) || d.isAfter(to)) return false;
+      // Note: Game type filter sent as param in API call; not filterable on
+      // mock data since _DailyRow doesn't carry a gameId field in this mock.
       return true;
-      // Note: LSK filter applied server-side in production; mocked here by
-      // keeping _selectedLsk in state for the API call payload
     }).toList();
   }
 
@@ -181,9 +185,6 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   String _fmtDate(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
-  String _fmtDateShort(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-
   /// Formats a balance with explicit +/- sign.
   String _fmtBalance(double v) =>
       v >= 0 ? '+${v.toStringAsFixed(0)}' : v.toStringAsFixed(0);
@@ -206,38 +207,60 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     );
   }
 
-  // ── LSK picker ────────────────────────────────────────────────────────────
+  // ── Game type picker ──────────────────────────────────────────────────────
 
-  void _showLskPicker(Color accentColor) {
+  void _showGamePicker(Color accentColor) {
+    // Build display list: 'All Games' + each game's displayName
+    final gameLabels = ['All Games', ...mockGames.map((g) => g.displayName)];
     showDialog(
       context: context,
       builder: (ctx) => _PickerDialog(
-        title: 'Ticket Type (LSK)',
-        items: _kAllLsk,
-        selected: _selectedLsk,
+        title: 'Select Game',
+        items: gameLabels,
+        selected: _selectedGameId == 'All Games'
+            ? 'All Games'
+            : (mockGames
+                    .cast<Game?>()
+                    .firstWhere(
+                      (g) => g!.id == _selectedGameId,
+                      orElse: () => null,
+                    )
+                    ?.displayName ??
+                'All Games'),
         accentColor: accentColor,
-        onSelected: (v) {
+        onSelected: (label) {
           Navigator.of(ctx).pop();
-          setState(() => _selectedLsk = v);
+          if (label == 'All Games') {
+            setState(() => _selectedGameId = 'All Games');
+          } else {
+            final matched = mockGames.cast<Game?>().firstWhere(
+                  (g) => g!.displayName == label,
+                  orElse: () => null,
+                );
+            if (matched != null) {
+              setState(() => _selectedGameId = matched.id);
+            }
+          }
         },
-        lskColorFn: _lskColor,
+        gameColorFn: (label) {
+          if (label == 'All Games') return accentColor;
+          final g = mockGames.cast<Game?>().firstWhere(
+                (g) => g!.displayName == label,
+                orElse: () => null,
+              );
+          if (g == null) return accentColor;
+          final lum = g.gradientColors.first.computeLuminance();
+          return lum < 0.08 ? AppColors.gsAccentBlue : g.gradientColors.first;
+        },
       ),
     );
   }
 
-  Color _lskColor(String lsk) {
-    switch (lsk.toUpperCase()) {
-      case 'AB':    return AppColors.lskAB;
-      case 'AC':    return AppColors.lskAC;
-      case 'BC':    return AppColors.dashboardTextSub;
-      case 'BOX':   return AppColors.lskBox;
-      case 'C':     return AppColors.lskC;
-      case 'BOTH':  return AppColors.lskBoth;
-      case 'SUPER': return AppColors.dashboardTextSub;
-      case 'A':     return AppColors.lskA;
-      case 'B':     return AppColors.lskB;
-      default:      return AppColors.gsAccentBlue;
-    }
+  // ── Search ────────────────────────────────────────────────────────────────
+
+  void _onSearch() {
+    // TODO: API call — pass _selectedDealer, _selectedGameId, _fromDate, _toDate
+    setState(() {}); // re-filter mock data for now
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -268,9 +291,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
             headerColors: headerColors,
           ),
           // ── Filters panel ──
-          _buildFiltersPanel(accentColor),
-          // ── Summary stat boxes ──
-          _buildSummaryRow(accentColor),
+          _buildFiltersPanel(accentColor, headerColors),
           // ── Table ──
           Expanded(
             child: rows.isEmpty
@@ -284,13 +305,24 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
 
   // ── Filters panel ─────────────────────────────────────────────────────────
 
-  Widget _buildFiltersPanel(Color accentColor) {
+  Widget _buildFiltersPanel(Color accentColor, List<Color> headerColors) {
+    final selectedGameLabel = _selectedGameId == 'All Games'
+        ? 'All Games'
+        : (mockGames
+                .cast<Game?>()
+                .firstWhere(
+                  (g) => g!.id == _selectedGameId,
+                  orElse: () => null,
+                )
+                ?.displayName ??
+            'All Games');
+
     return Container(
       color: AppColors.dashboardSurface,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       child: Column(
         children: [
-          // Row 1: Dealer + LSK
+          // Row 1: Dealer + Game Type
           Row(
             children: [
               // Dealer selector
@@ -305,23 +337,21 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              // LSK type selector
+              // Game type selector
               Expanded(
                 child: _SelectorButton(
-                  icon: Icons.style_rounded,
-                  label: 'Ticket Type',
-                  value: _selectedLsk,
-                  accentColor: _selectedLsk != 'ALL'
-                      ? _lskColor(_selectedLsk)
-                      : accentColor,
-                  isActive: _selectedLsk != 'ALL',
-                  onTap: () => _showLskPicker(accentColor),
+                  icon: Icons.sports_esports_rounded,
+                  label: 'Game',
+                  value: selectedGameLabel,
+                  accentColor: accentColor,
+                  isActive: _selectedGameId != 'All Games',
+                  onTap: () => _showGamePicker(accentColor),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          // Row 2: Date range
+          // Row 2: Date range + Search button
           Row(
             children: [
               Expanded(
@@ -333,7 +363,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
                   '→',
                   style: TextStyle(
@@ -351,43 +381,48 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                   onTap: () => _pickToDate(accentColor),
                 ),
               ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Summary stat boxes ────────────────────────────────────────────────────
-
-  Widget _buildSummaryRow(Color accentColor) {
-    return Container(
-      color: AppColors.dashboardSurface,
-      padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-      child: Column(
-        children: [
-          Container(height: 1, color: AppColors.dashboardBorder),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _StatBox(
-                label: 'Total Sale',
-                value: _totalSale.toStringAsFixed(0),
-                accentColor: accentColor,
-              ),
-              const SizedBox(width: 8),
-              _StatBox(
-                label: 'Total Win',
-                value: _totalWin.toStringAsFixed(0),
-                accentColor: AppColors.dashboardLogout,
-              ),
-              const SizedBox(width: 8),
-              _StatBox(
-                label: 'Balance',
-                value: _fmtBalance(_totalBalance),
-                accentColor: _totalBalance >= 0
-                    ? AppColors.lskBox
-                    : AppColors.dashboardLogout,
+              const SizedBox(width: 10),
+              // Search button
+              GestureDetector(
+                onTap: _onSearch,
+                child: Container(
+                  height: 46,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: headerColors.length >= 2
+                          ? [headerColors[0], headerColors.last]
+                          : [headerColors[0], headerColors[0]],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentColor.withOpacity(0.30),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.search_rounded,
+                          color: Colors.white, size: 18),
+                      SizedBox(width: 6),
+                      Text(
+                        'Search',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -415,7 +450,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
           ),
           SizedBox(height: 4),
           Text(
-            'Try adjusting the dealer, dates, or ticket type',
+            'Adjust filters and tap Search',
             style: TextStyle(
                 color: AppColors.dashboardTextDim, fontSize: 12),
           ),
@@ -488,7 +523,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                     Expanded(
                       flex: 3,
                       child: Text(
-                        _fmtDateShort(r.date),
+                        _fmtDate(r.date),
                         style: const TextStyle(
                           color: AppColors.dashboardTextSub,
                           fontSize: 11,
@@ -558,9 +593,9 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
         ),
         // ── Totals footer ──
         Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: AppColors.dashboardSurface2,
-            border: const Border(
+            border: Border(
               top: BorderSide(color: AppColors.dashboardBorder, width: 1),
             ),
           ),
@@ -627,7 +662,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SELECTOR BUTTON (dealer / LSK)
+// SELECTOR BUTTON (dealer / game type)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _SelectorButton extends StatelessWidget {
@@ -774,62 +809,6 @@ class _DateButton extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STAT BOX
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _StatBox extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color accentColor;
-
-  const _StatBox({
-    required this.label,
-    required this.value,
-    required this.accentColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-        decoration: BoxDecoration(
-          color: AppColors.dashboardBg,
-          borderRadius: BorderRadius.circular(10),
-          border:
-              Border.all(color: AppColors.dashboardBorder, width: 1),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.dashboardTextDim,
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              value,
-              style: TextStyle(
-                color: accentColor,
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                height: 1,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // HEADER
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -930,7 +909,7 @@ class _DailyReportHeader extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GENERIC PICKER DIALOG (dealer + LSK share the same widget)
+// GENERIC PICKER DIALOG (dealer + game type share the same widget)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _PickerDialog extends StatefulWidget {
@@ -939,7 +918,7 @@ class _PickerDialog extends StatefulWidget {
   final String selected;
   final Color accentColor;
   final ValueChanged<String> onSelected;
-  final Color Function(String)? lskColorFn; // non-null → show LSK colour dots
+  final Color Function(String)? gameColorFn; // non-null → show game colour dots
 
   const _PickerDialog({
     required this.title,
@@ -947,7 +926,7 @@ class _PickerDialog extends StatefulWidget {
     required this.selected,
     required this.accentColor,
     required this.onSelected,
-    this.lskColorFn,
+    this.gameColorFn,
   });
 
   @override
@@ -1085,8 +1064,8 @@ class _PickerDialogState extends State<_PickerDialog> {
                       itemBuilder: (context, index) {
                         final item = items[index];
                         final isSelected = item == widget.selected;
-                        final dotColor = widget.lskColorFn != null
-                            ? widget.lskColorFn!(item)
+                        final dotColor = widget.gameColorFn != null
+                            ? widget.gameColorFn!(item)
                             : null;
 
                         return Material(
@@ -1102,8 +1081,8 @@ class _PickerDialogState extends State<_PickerDialog> {
                                   horizontal: 16, vertical: 14),
                               child: Row(
                                 children: [
-                                  // Radio or colour dot
-                                  if (dotColor != null && item != 'ALL')
+                                  // Radio or game colour dot
+                                  if (dotColor != null)
                                     AnimatedContainer(
                                       duration: const Duration(
                                           milliseconds: 150),

@@ -2,8 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../constants/app_colors.dart';
-import '../../../../constants/app_text_styles.dart';
+import '../../constants/app_colors.dart';
+import '../../constants/app_text_styles.dart';
+import '../../services/auth_service.dart';
+import '../../services/storage_service.dart';
+import '../../widgets/common_toast.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,6 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _passwordVisible = false;
   bool _usernameFocused = false;
   bool _passwordFocused = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -42,9 +46,36 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _onLogin() {
-    // TODO: Add validation and API call
-    context.go('/game-selection');
+  Future<void> _onLogin() async {
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      CommonToast.showError(context, 'Please enter your username and password.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    FocusScope.of(context).unfocus();
+
+    try {
+      // TODO: API call — POST /api/v1/auth/admin/login/
+      final result = await AuthService.adminLogin(username, password);
+
+      await StorageService.saveAuthData(
+        accessToken:  result.accessToken,
+        refreshToken: result.refreshToken,
+        username:     result.username,
+        name:         result.name,
+        role:         result.role,
+      );
+
+      if (mounted) context.go('/game-selection');
+    } on AuthException catch (e) {
+      if (mounted) CommonToast.showError(context, e.message);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -351,40 +382,53 @@ class _LoginScreenState extends State<LoginScreen> {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: _onLogin,
+        onTap: _isLoading ? null : _onLogin,
         child: Ink(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
-              colors: [AppColors.loginButtonStart, AppColors.loginButtonEnd],
+              colors: _isLoading
+                  ? [AppColors.loginButtonStart.withOpacity(0.6), AppColors.loginButtonEnd.withOpacity(0.6)]
+                  : [AppColors.loginButtonStart, AppColors.loginButtonEnd],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryBlue.withOpacity(0.4),
-                blurRadius: 14,
-                spreadRadius: 1,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            boxShadow: _isLoading
+                ? []
+                : [
+                    BoxShadow(
+                      color: AppColors.primaryBlue.withOpacity(0.4),
+                      blurRadius: 14,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
           ),
           child: Container(
             width: double.infinity,
             height: 52,
             alignment: Alignment.center,
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('LOGIN', style: AppTextStyles.loginButton),
-                SizedBox(width: 10),
-                Icon(
-                  Icons.arrow_forward_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ],
-            ),
+            child: _isLoading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('LOGIN', style: AppTextStyles.loginButton),
+                      SizedBox(width: 10),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ],
+                  ),
           ),
         ),
       ),

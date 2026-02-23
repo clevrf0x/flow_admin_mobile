@@ -2,10 +2,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../router/app_router.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'router/app_router.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables from .env asset
+  await dotenv.load(fileName: '.env');
 
   // Lock to portrait mode
   SystemChrome.setPreferredOrientations([
