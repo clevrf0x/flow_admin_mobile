@@ -228,10 +228,13 @@ class _OthersMenuRow extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          // Navigate to settings if item id is 'settings'
           if (item.id == 'settings') {
             context.go(
               '/dashboard/$gameId/settings?gameName=${Uri.encodeComponent(gameName)}',
+            );
+          } else if (item.id == 'daily_report_others') {
+            context.go(
+              '/dashboard/$gameId/daily-report?gameName=${Uri.encodeComponent(gameName)}',
             );
           } else {
             // TODO: Navigate to other item sub-screens

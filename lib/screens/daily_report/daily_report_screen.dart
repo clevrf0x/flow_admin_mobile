@@ -4,72 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../constants/app_colors.dart';
+import '../../models/dealer.dart';
 import '../../models/game.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MOCK DATA — TODO: Replace with API call
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _DailyRow {
-  final DateTime date;
-  final String dealer;
-  final double tSale;  // total sale amount
-  final double tWin;   // total winning payout
-  // balance = tSale - tWin, computed property
-
-  const _DailyRow({
-    required this.date,
-    required this.dealer,
-    required this.tSale,
-    required this.tWin,
-  });
-
-  double get balance => tSale - tWin;
-}
-
-// Mock dealer list — TODO: Replace with API call
-const List<String> _kDealers = [
-  'All Dealers',
-  'Kurukkan',
-  'BLT',
-  'KTA',
-  'SJ',
-  'RANADEV',
-  'AJAYAN',
-  'SELF',
-  'PATHRAM',
-  'SALEEMV',
-  'TB',
-  'AKHII valli',
-  'Anas',
-  'Ambadi',
-];
-
-// Mock report rows — TODO: Replace with API call
-// Each row = one dealer's summary for one date
-// Uses today + yesterday so the table is visible with default date range.
-final List<_DailyRow> _kMockRows = () {
-  final today = DateTime.now();
-  final yesterday = today.subtract(const Duration(days: 1));
-  return [
-    // Yesterday entries
-    _DailyRow(date: yesterday, dealer: 'Kurukkan',  tSale: 4500,  tWin: 1200),
-    _DailyRow(date: yesterday, dealer: 'BLT',       tSale: 3200,  tWin: 800),
-    _DailyRow(date: yesterday, dealer: 'KTA',       tSale: 5100,  tWin: 2300),
-    _DailyRow(date: yesterday, dealer: 'SJ',        tSale: 2800,  tWin: 400),
-    _DailyRow(date: yesterday, dealer: 'RANADEV',   tSale: 6200,  tWin: 3100),
-    _DailyRow(date: yesterday, dealer: 'AJAYAN',    tSale: 1900,  tWin: 0),
-    _DailyRow(date: yesterday, dealer: 'SELF',      tSale: 7800,  tWin: 2200),
-    // Today entries
-    _DailyRow(date: today, dealer: 'Kurukkan',  tSale: 3900,  tWin: 1600),
-    _DailyRow(date: today, dealer: 'BLT',       tSale: 2600,  tWin: 700),
-    _DailyRow(date: today, dealer: 'KTA',       tSale: 4400,  tWin: 900),
-    _DailyRow(date: today, dealer: 'PATHRAM',   tSale: 5500,  tWin: 1800),
-    _DailyRow(date: today, dealer: 'SALEEMV',   tSale: 3300,  tWin: 550),
-    _DailyRow(date: today, dealer: 'Anas',      tSale: 4200,  tWin: 1900),
-    _DailyRow(date: today, dealer: 'Ambadi',    tSale: 3100,  tWin: 600),
-  ];
-}();
+import '../../services/booking_service.dart';
+import '../../services/daily_report_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SCREEN
@@ -90,12 +28,22 @@ class DailyReportScreen extends StatefulWidget {
 }
 
 class _DailyReportScreenState extends State<DailyReportScreen> {
-  String _selectedDealer = 'All Dealers';
-  // Default dates = today (both FROM and TO)
+  // ── Dealer state ─────────────────────────────────────────────────────────
+  List<Dealer> _dealers = [];
+  bool _dealersLoading = false;
+  Dealer? _selectedDealer; // null = All Dealers
+
+  // ── Report rows ──────────────────────────────────────────────────────────
+  List<DailyReportRow> _rows = [];
+  bool _isLoading = false;
+  String? _error;
+
+  // ── Date range (default: today → today) ──────────────────────────────────
   late DateTime _fromDate;
   late DateTime _toDate;
-  // Game type selector — 'All Games' means no filter
-  String _selectedGameId = 'All Games';
+
+  // ── Game type selector ────────────────────────────────────────────────────
+  String _selectedGameId = 'all'; // 'all' or one of VALID_GAME_IDS
 
   @override
   void initState() {
@@ -103,6 +51,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     final now = DateTime.now();
     _fromDate = DateTime(now.year, now.month, now.day);
     _toDate   = DateTime(now.year, now.month, now.day);
+    _fetchDealers();
+    _fetchReport(); // load today's data immediately
   }
 
   Game? get _game {
@@ -119,31 +69,77 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     return headerColors.first;
   }
 
-  // ── Filtered rows ─────────────────────────────────────────────────────────
+  // ── Formatting ────────────────────────────────────────────────────────────
 
-  List<_DailyRow> get _filteredRows {
-    // TODO: API call — fetch rows filtered by dealer, date range, game type
-    return _kMockRows.where((r) {
-      // Dealer filter
-      if (_selectedDealer != 'All Dealers' && r.dealer != _selectedDealer) {
-        return false;
-      }
-      // Date range filter
-      final d    = DateTime(r.date.year, r.date.month, r.date.day);
-      final from = DateTime(_fromDate.year, _fromDate.month, _fromDate.day);
-      final to   = DateTime(_toDate.year, _toDate.month, _toDate.day);
-      if (d.isBefore(from) || d.isAfter(to)) return false;
-      // Note: Game type filter sent as param in API call; not filterable on
-      // mock data since _DailyRow doesn't carry a gameId field in this mock.
-      return true;
-    }).toList();
+  String _fmtDate(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  /// Formats a balance with explicit +/- sign. Never shows decimals.
+  String _fmtBalance(double v) =>
+      v >= 0 ? '+${v.toStringAsFixed(0)}' : v.toStringAsFixed(0);
+
+  /// Converts a "YYYY-MM-DD" string from the API to DD/MM/YYYY for display.
+  String _fmtApiDate(String apiDate) {
+    final parts = apiDate.split('-');
+    if (parts.length != 3) return apiDate;
+    return '${parts[2]}/${parts[1]}/${parts[0]}';
   }
 
-  double get _totalSale =>
-      _filteredRows.fold(0.0, (s, r) => s + r.tSale);
-  double get _totalWin =>
-      _filteredRows.fold(0.0, (s, r) => s + r.tWin);
-  double get _totalBalance => _totalSale - _totalWin;
+  // ── API calls ─────────────────────────────────────────────────────────────
+
+  Future<void> _fetchDealers() async {
+    setState(() => _dealersLoading = true);
+    try {
+      // TODO: API call — getDealers filtered by game access
+      final dealers = await BookingService.getDealers(widget.gameId);
+      if (!mounted) return;
+      setState(() {
+        _dealers = dealers;
+        _dealersLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _dealersLoading = false);
+      // Non-critical — user can still search without dealer filter
+    }
+  }
+
+  Future<void> _fetchReport() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      // TODO: API call
+      final rows = await DailyReportService.fetchReport(
+        startDate: '${_fromDate.year}-'
+            '${_fromDate.month.toString().padLeft(2, '0')}-'
+            '${_fromDate.day.toString().padLeft(2, '0')}',
+        endDate: '${_toDate.year}-'
+            '${_toDate.month.toString().padLeft(2, '0')}-'
+            '${_toDate.day.toString().padLeft(2, '0')}',
+        gameId: _selectedGameId == 'all' ? null : _selectedGameId,
+        dealerId: _selectedDealer?.id,
+      );
+      if (!mounted) return;
+      setState(() {
+        _rows = rows;
+        _isLoading = false;
+      });
+    } on DailyReportException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Failed to load report. Please try again.';
+        _isLoading = false;
+      });
+    }
+  }
 
   // ── Date pickers ──────────────────────────────────────────────────────────
 
@@ -182,26 +178,30 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
         child: child,
       );
 
-  String _fmtDate(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-
-  /// Formats a balance with explicit +/- sign.
-  String _fmtBalance(double v) =>
-      v >= 0 ? '+${v.toStringAsFixed(0)}' : v.toStringAsFixed(0);
-
   // ── Dealer picker ─────────────────────────────────────────────────────────
 
   void _showDealerPicker(Color accentColor) {
+    final items = ['All Dealers', ..._dealers.map((d) => d.name)];
+    final selected = _selectedDealer?.name ?? 'All Dealers';
+
     showDialog(
       context: context,
       builder: (ctx) => _PickerDialog(
         title: 'Select Dealer',
-        items: _kDealers,
-        selected: _selectedDealer,
+        items: items,
+        selected: selected,
         accentColor: accentColor,
-        onSelected: (v) {
+        onSelected: (name) {
           Navigator.of(ctx).pop();
-          setState(() => _selectedDealer = v);
+          if (name == 'All Dealers') {
+            setState(() => _selectedDealer = null);
+          } else {
+            final matched = _dealers.cast<Dealer?>().firstWhere(
+                  (d) => d!.name == name,
+                  orElse: () => null,
+                );
+            setState(() => _selectedDealer = matched);
+          }
         },
       ),
     );
@@ -210,36 +210,35 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   // ── Game type picker ──────────────────────────────────────────────────────
 
   void _showGamePicker(Color accentColor) {
-    // Build display list: 'All Games' + each game's displayName
     final gameLabels = ['All Games', ...mockGames.map((g) => g.displayName)];
+    final selectedLabel = _selectedGameId == 'all'
+        ? 'All Games'
+        : (mockGames
+                .cast<Game?>()
+                .firstWhere(
+                  (g) => g!.id == _selectedGameId,
+                  orElse: () => null,
+                )
+                ?.displayName ??
+            'All Games');
+
     showDialog(
       context: context,
       builder: (ctx) => _PickerDialog(
         title: 'Select Game',
         items: gameLabels,
-        selected: _selectedGameId == 'All Games'
-            ? 'All Games'
-            : (mockGames
-                    .cast<Game?>()
-                    .firstWhere(
-                      (g) => g!.id == _selectedGameId,
-                      orElse: () => null,
-                    )
-                    ?.displayName ??
-                'All Games'),
+        selected: selectedLabel,
         accentColor: accentColor,
         onSelected: (label) {
           Navigator.of(ctx).pop();
           if (label == 'All Games') {
-            setState(() => _selectedGameId = 'All Games');
+            setState(() => _selectedGameId = 'all');
           } else {
             final matched = mockGames.cast<Game?>().firstWhere(
                   (g) => g!.displayName == label,
                   orElse: () => null,
                 );
-            if (matched != null) {
-              setState(() => _selectedGameId = matched.id);
-            }
+            if (matched != null) setState(() => _selectedGameId = matched.id);
           }
         },
         gameColorFn: (label) {
@@ -258,10 +257,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
 
   // ── Search ────────────────────────────────────────────────────────────────
 
-  void _onSearch() {
-    // TODO: API call — pass _selectedDealer, _selectedGameId, _fromDate, _toDate
-    setState(() {}); // re-filter mock data for now
-  }
+  void _onSearch() => _fetchReport();
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
@@ -278,26 +274,18 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     final headerColors = game?.gradientColors ??
         [AppColors.primaryBlue, AppColors.primaryBlueDark];
     final accentColor = _resolvedAccentColor(headerColors);
-    final rows = _filteredRows;
 
     return Scaffold(
       backgroundColor: AppColors.dashboardBg,
       body: Column(
         children: [
-          // ── Gradient header ──
           _DailyReportHeader(
             gameName: widget.gameName,
             gameId: widget.gameId,
             headerColors: headerColors,
           ),
-          // ── Filters panel ──
           _buildFiltersPanel(accentColor, headerColors),
-          // ── Table ──
-          Expanded(
-            child: rows.isEmpty
-                ? _buildEmptyState()
-                : _buildTable(rows, accentColor),
-          ),
+          Expanded(child: _buildBody(accentColor)),
         ],
       ),
     );
@@ -306,7 +294,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   // ── Filters panel ─────────────────────────────────────────────────────────
 
   Widget _buildFiltersPanel(Color accentColor, List<Color> headerColors) {
-    final selectedGameLabel = _selectedGameId == 'All Games'
+    final selectedGameLabel = _selectedGameId == 'all'
         ? 'All Games'
         : (mockGames
                 .cast<Game?>()
@@ -322,36 +310,37 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       child: Column(
         children: [
-          // Row 1: Dealer + Game Type
+          // Row 1: Dealer + Game type
           Row(
             children: [
-              // Dealer selector
               Expanded(
                 child: _SelectorButton(
                   icon: Icons.person_rounded,
                   label: 'Dealer',
-                  value: _selectedDealer,
+                  value: _selectedDealer?.name ?? 'All Dealers',
                   accentColor: accentColor,
-                  isActive: _selectedDealer != 'All Dealers',
-                  onTap: () => _showDealerPicker(accentColor),
+                  isActive: _selectedDealer != null,
+                  isLoading: _dealersLoading,
+                  onTap: _dealers.isEmpty
+                      ? null
+                      : () => _showDealerPicker(accentColor),
                 ),
               ),
               const SizedBox(width: 10),
-              // Game type selector
               Expanded(
                 child: _SelectorButton(
                   icon: Icons.sports_esports_rounded,
                   label: 'Game',
                   value: selectedGameLabel,
                   accentColor: accentColor,
-                  isActive: _selectedGameId != 'All Games',
+                  isActive: _selectedGameId != 'all',
                   onTap: () => _showGamePicker(accentColor),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          // Row 2: Date range + Search button
+          // Row 2: Date range + Search
           Row(
             children: [
               Expanded(
@@ -382,9 +371,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              // Search button
               GestureDetector(
-                onTap: _onSearch,
+                onTap: _isLoading ? null : _onSearch,
                 child: Container(
                   height: 46,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -405,13 +393,23 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                       ),
                     ],
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.search_rounded,
-                          color: Colors.white, size: 18),
-                      SizedBox(width: 6),
-                      Text(
+                      if (_isLoading)
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      else
+                        const Icon(Icons.search_rounded,
+                            color: Colors.white, size: 18),
+                      const SizedBox(width: 6),
+                      const Text(
                         'Search',
                         style: TextStyle(
                           color: Colors.white,
@@ -431,7 +429,51 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     );
   }
 
-  // ── Table ─────────────────────────────────────────────────────────────────
+  // ── Body (table / loading / error / empty) ────────────────────────────────
+
+  Widget _buildBody(Color accentColor) {
+    if (_isLoading && _rows.isEmpty) {
+      return Center(child: CircularProgressIndicator(color: accentColor));
+    }
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline_rounded,
+                color: AppColors.dashboardLogout, size: 40),
+            const SizedBox(height: 12),
+            Text(
+              _error!,
+              style: const TextStyle(
+                  color: AppColors.dashboardTextSub, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: _fetchReport,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.dashboardBorder),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Retry',
+                  style: TextStyle(
+                      color: AppColors.dashboardTextPrim,
+                      fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    if (_rows.isEmpty) return _buildEmptyState();
+    return _buildTable(_rows, accentColor);
+  }
 
   Widget _buildEmptyState() {
     return const Center(
@@ -459,7 +501,9 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     );
   }
 
-  Widget _buildTable(List<_DailyRow> rows, Color accentColor) {
+  // ── Table ─────────────────────────────────────────────────────────────────
+
+  Widget _buildTable(List<DailyReportRow> rows, Color accentColor) {
     const headerStyle = TextStyle(
       color: AppColors.dashboardTextDim,
       fontSize: 10,
@@ -467,43 +511,36 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
       letterSpacing: 1.0,
     );
 
-    // Totals for footer
     final totSale = rows.fold(0.0, (s, r) => s + r.tSale);
     final totWin  = rows.fold(0.0, (s, r) => s + r.tWin);
     final totBal  = totSale - totWin;
 
     return Column(
       children: [
-        // ── Table header ──
+        // Table header
         Container(
           color: AppColors.dashboardSurface2,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
           child: Row(
             children: [
+              Expanded(flex: 3, child: Text('DATE', style: headerStyle)),
+              Expanded(flex: 3, child: Text('DEALER', style: headerStyle)),
               Expanded(
-                flex: 3,
-                child: Text('DATE', style: headerStyle),
-              ),
+                  flex: 2,
+                  child: Text('T.SALE',
+                      textAlign: TextAlign.center, style: headerStyle)),
               Expanded(
-                flex: 3,
-                child: Text('DEALER', style: headerStyle),
-              ),
+                  flex: 2,
+                  child: Text('T.WIN',
+                      textAlign: TextAlign.center, style: headerStyle)),
               Expanded(
-                flex: 2,
-                child: Text('T.SALE', textAlign: TextAlign.center, style: headerStyle),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text('T.WIN', textAlign: TextAlign.center, style: headerStyle),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text('BALANCE', textAlign: TextAlign.right, style: headerStyle),
-              ),
+                  flex: 2,
+                  child: Text('BALANCE',
+                      textAlign: TextAlign.right, style: headerStyle)),
             ],
           ),
         ),
-        // ── Data rows ──
+        // Data rows
         Expanded(
           child: ListView.builder(
             itemCount: rows.length,
@@ -519,11 +556,10 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                     horizontal: 16, vertical: 11),
                 child: Row(
                   children: [
-                    // Date
                     Expanded(
                       flex: 3,
                       child: Text(
-                        _fmtDate(r.date),
+                        _fmtApiDate(r.date),
                         style: const TextStyle(
                           color: AppColors.dashboardTextSub,
                           fontSize: 11,
@@ -531,11 +567,10 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                         ),
                       ),
                     ),
-                    // Dealer
                     Expanded(
                       flex: 3,
                       child: Text(
-                        r.dealer,
+                        r.dealerName,
                         style: const TextStyle(
                           color: AppColors.dashboardTextPrim,
                           fontSize: 12,
@@ -544,7 +579,6 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    // T.Sale
                     Expanded(
                       flex: 2,
                       child: Text(
@@ -557,7 +591,6 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                         ),
                       ),
                     ),
-                    // T.Win
                     Expanded(
                       flex: 2,
                       child: Text(
@@ -570,7 +603,6 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                         ),
                       ),
                     ),
-                    // Balance
                     Expanded(
                       flex: 2,
                       child: Text(
@@ -591,7 +623,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
             },
           ),
         ),
-        // ── Totals footer ──
+        // Totals footer
         Container(
           decoration: const BoxDecoration(
             color: AppColors.dashboardSurface2,
@@ -671,7 +703,8 @@ class _SelectorButton extends StatelessWidget {
   final String value;
   final Color accentColor;
   final bool isActive;
-  final VoidCallback onTap;
+  final bool isLoading;
+  final VoidCallback? onTap;
 
   const _SelectorButton({
     required this.icon,
@@ -679,6 +712,7 @@ class _SelectorButton extends StatelessWidget {
     required this.value,
     required this.accentColor,
     required this.isActive,
+    this.isLoading = false,
     required this.onTap,
   });
 
@@ -704,9 +738,19 @@ class _SelectorButton extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon,
-                color: isActive ? accentColor : AppColors.dashboardTextDim,
-                size: 14),
+            isLoading
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      color: AppColors.dashboardTextDim,
+                      strokeWidth: 1.5,
+                    ),
+                  )
+                : Icon(icon,
+                    color:
+                        isActive ? accentColor : AppColors.dashboardTextDim,
+                    size: 14),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -837,7 +881,8 @@ class _DailyReportHeader extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(6, statusBarHeight + 4, 16, 14),
+        padding:
+            EdgeInsets.fromLTRB(6, statusBarHeight + 4, 16, 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -918,7 +963,7 @@ class _PickerDialog extends StatefulWidget {
   final String selected;
   final Color accentColor;
   final ValueChanged<String> onSelected;
-  final Color Function(String)? gameColorFn; // non-null → show game colour dots
+  final Color Function(String)? gameColorFn;
 
   const _PickerDialog({
     required this.title,
@@ -980,7 +1025,6 @@ class _PickerDialogState extends State<_PickerDialog> {
         clipBehavior: Clip.antiAlias,
         child: Column(
           children: [
-            // Header
             Container(
               color: AppColors.dashboardSurface,
               padding: const EdgeInsets.fromLTRB(6, 14, 16, 14),
@@ -1010,7 +1054,6 @@ class _PickerDialogState extends State<_PickerDialog> {
                 ],
               ),
             ),
-            // Search bar
             Container(
               color: AppColors.dashboardSurface,
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -1036,14 +1079,13 @@ class _PickerDialogState extends State<_PickerDialog> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(
-                        color: widget.accentColor, width: 1.5),
+                    borderSide:
+                        BorderSide(color: widget.accentColor, width: 1.5),
                   ),
                 ),
               ),
             ),
             Container(height: 1, color: AppColors.dashboardBorder),
-            // List
             Expanded(
               child: items.isEmpty
                   ? const Center(
@@ -1081,7 +1123,6 @@ class _PickerDialogState extends State<_PickerDialog> {
                                   horizontal: 16, vertical: 14),
                               child: Row(
                                 children: [
-                                  // Radio or game colour dot
                                   if (dotColor != null)
                                     AnimatedContainer(
                                       duration: const Duration(

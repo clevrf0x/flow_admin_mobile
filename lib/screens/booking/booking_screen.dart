@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../constants/app_colors.dart';
+import '../../models/dealer.dart';
 import '../../models/game.dart';
+import '../../services/booking_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DATA MODELS
+// ENUMS
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum DigitMode { one, two, three }
@@ -33,21 +35,31 @@ extension BookTypeLabel on BookType {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// BOOKING ENTRY
+//
+// Stores only the ticket data — NO prices.
+// Amounts are computed dynamically from the selected dealer's package so that
+// switching dealers instantly reflects correct rates in the table.
+// The server also never receives prices from the client; it recalculates
+// everything from its own stored package data.
+// ─────────────────────────────────────────────────────────────────────────────
+
 class BookingEntry {
   final String lsk;
   final String number;
   final int count;
-  final int dAmount;
-  final int cAmount;
 
   const BookingEntry({
     required this.lsk,
     required this.number,
     required this.count,
-    required this.dAmount,
-    required this.cAmount,
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LSK COLOR HELPER
+// ─────────────────────────────────────────────────────────────────────────────
 
 Color lskColor(String lsk) {
   switch (lsk) {
@@ -56,7 +68,7 @@ Color lskColor(String lsk) {
     case 'AC':
       return AppColors.lskAC;
     case 'BC':
-      return const Color(0xFF8B949E); // muted on dark bg
+      return const Color(0xFF8B949E);
     case 'A':
       return AppColors.lskA;
     case 'B':
@@ -66,7 +78,7 @@ Color lskColor(String lsk) {
     case 'Box':
       return AppColors.lskBox;
     case 'Super':
-      return const Color(0xFF8B949E); // muted on dark bg
+      return const Color(0xFF8B949E);
     case 'Both':
       return AppColors.lskBoth;
     default:
@@ -74,11 +86,19 @@ Color lskColor(String lsk) {
   }
 }
 
-const int kDRate = 9;
-const int kCRate = 10;
-
-int calcD(int count, {int rate = kDRate}) => count * rate;
-int calcC(int count, {int rate = kCRate}) => count * rate;
+// Fallback preview rates when no dealer is selected yet.
+// Mirrors server Package model field defaults (commission defaults to 0,
+// so d_rate = price - 0 = price).
+//   single_ticket_price default = 12, commission default = 0 → d=12, c=12
+//   double/super/box_ticket_price default = 10, commission default = 0 → d=10, c=10
+const double _kDefaultSingleDRate = 12.0;
+const double _kDefaultSingleCRate = 12.0;
+const double _kDefaultDoubleDRate = 10.0;
+const double _kDefaultDoubleCRate = 10.0;
+const double _kDefaultSuperDRate  = 10.0;
+const double _kDefaultSuperCRate  = 10.0;
+const double _kDefaultBoxDRate    = 10.0;
+const double _kDefaultBoxCRate    = 10.0;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SCREEN
@@ -109,10 +129,16 @@ class _BookingScreenState extends State<BookingScreen> {
   final _field2Focus = FocusNode();
   final _field3Focus = FocusNode();
 
-  String _selectedDealer = 'Dealer';
+  // ── Dealer state ────────────────────────────────────────────────────────────
+  List<Dealer> _dealers = [];
+  bool _dealersLoading = false;
+  String? _dealersError;
+  Dealer? _selectedDealer;
+
+  // ── Entries ─────────────────────────────────────────────────────────────────
   final List<BookingEntry> _entries = [];
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
+  // ── Helpers ─────────────────────────────────────────────────────────────────
 
   Game? get _game {
     try {
@@ -126,6 +152,43 @@ class _BookingScreenState extends State<BookingScreen> {
     if (colors.first.computeLuminance() < 0.08) return AppColors.gsAccentBlue;
     return colors.first;
   }
+
+  // Amount helpers — select rate based on LSK type, mirrors server _ticket_rates().
+  // A/B/C → single  |  AB/AC/BC → double  |  Super → super  |  Box → box
+  double _dAmount(BookingEntry e) {
+    final pkg = _selectedDealer?.package;
+    if (e.lsk == 'A' || e.lsk == 'B' || e.lsk == 'C') {
+      return e.count * (pkg?.singleDRate ?? _kDefaultSingleDRate);
+    }
+    if (e.lsk == 'AB' || e.lsk == 'AC' || e.lsk == 'BC') {
+      return e.count * (pkg?.doubleDRate ?? _kDefaultDoubleDRate);
+    }
+    if (e.lsk == 'Super') {
+      return e.count * (pkg?.superDRate ?? _kDefaultSuperDRate);
+    }
+    // Box
+    return e.count * (pkg?.boxDRate ?? _kDefaultBoxDRate);
+  }
+
+  double _cAmount(BookingEntry e) {
+    final pkg = _selectedDealer?.package;
+    if (e.lsk == 'A' || e.lsk == 'B' || e.lsk == 'C') {
+      return e.count * (pkg?.singleCRate ?? _kDefaultSingleCRate);
+    }
+    if (e.lsk == 'AB' || e.lsk == 'AC' || e.lsk == 'BC') {
+      return e.count * (pkg?.doubleCRate ?? _kDefaultDoubleCRate);
+    }
+    if (e.lsk == 'Super') {
+      return e.count * (pkg?.superCRate ?? _kDefaultSuperCRate);
+    }
+    // Box
+    return e.count * (pkg?.boxCRate ?? _kDefaultBoxCRate);
+  }
+
+  /// Formats a money amount: no decimals when whole, 2 decimal places otherwise.
+  /// e.g.  42.0 → "42"   |   42.5 → "42.50"
+  String _fmtAmt(double v) =>
+      v == v.truncateToDouble() ? v.toInt().toString() : v.toStringAsFixed(2);
 
   int get _digitCount => _digitMode == DigitMode.one
       ? 1
@@ -146,7 +209,7 @@ class _BookingScreenState extends State<BookingScreen> {
           BookType.set,
           BookType.tens,
           BookType.hundreds,
-          BookType.triples
+          BookType.triples,
         ];
     }
   }
@@ -178,10 +241,40 @@ class _BookingScreenState extends State<BookingScreen> {
 
   bool get _showThirdField => _bookType != BookType.book;
 
-  // ── Zero-pad: left-pad the input value to the required digit count ─────────
   String _pad(String raw) => raw.padLeft(_digitCount, '0');
 
-  // ── Entry generation ───────────────────────────────────────────────────────
+  // ── Dealer fetching ─────────────────────────────────────────────────────────
+
+  Future<void> _fetchDealers() async {
+    setState(() {
+      _dealersLoading = true;
+      _dealersError = null;
+    });
+    try {
+      // TODO: API call — GET /api/v1/dealers/?game_id=<gameId>
+      final dealers = await BookingService.getDealers(widget.gameId);
+      if (!mounted) return;
+      setState(() {
+        _dealers = dealers;
+        _dealersLoading = false;
+        // If previously selected dealer is still in the new list, keep it.
+        // Otherwise clear the selection.
+        if (_selectedDealer != null) {
+          final stillExists =
+              dealers.any((d) => d.id == _selectedDealer!.id);
+          if (!stillExists) _selectedDealer = null;
+        }
+      });
+    } on BookingException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _dealersError = e.message;
+        _dealersLoading = false;
+      });
+    }
+  }
+
+  // ── Entry generation ────────────────────────────────────────────────────────
 
   void _onActionButton(String action) {
     final f1 = _field1Controller.text.trim();
@@ -228,39 +321,19 @@ class _BookingScreenState extends State<BookingScreen> {
     if (_digitMode == DigitMode.one) {
       final lsks = action == 'ALL' ? ['A', 'B', 'C'] : [action];
       for (final lsk in lsks) {
-        entries.add(BookingEntry(
-            lsk: lsk,
-            number: number,
-            count: count,
-            dAmount: calcD(count),
-            cAmount: calcC(count)));
+        entries.add(BookingEntry(lsk: lsk, number: number, count: count));
       }
     } else if (_digitMode == DigitMode.two) {
       final lsks = action == 'ALL' ? ['AB', 'AC', 'BC'] : [action];
       for (final lsk in lsks) {
-        entries.add(BookingEntry(
-            lsk: lsk,
-            number: number,
-            count: count,
-            dAmount: calcD(count),
-            cAmount: calcC(count)));
+        entries.add(BookingEntry(lsk: lsk, number: number, count: count));
       }
     } else {
       if (action == 'BOX' || action == 'BOTH') {
-        entries.add(BookingEntry(
-            lsk: 'Box',
-            number: number,
-            count: count,
-            dAmount: calcD(count),
-            cAmount: calcC(count)));
+        entries.add(BookingEntry(lsk: 'Box', number: number, count: count));
       }
       if (action == 'SUPER' || action == 'BOTH') {
-        entries.add(BookingEntry(
-            lsk: 'Super',
-            number: number,
-            count: count,
-            dAmount: calcD(count, rate: 9),
-            cAmount: calcC(count, rate: 10)));
+        entries.add(BookingEntry(lsk: 'Super', number: number, count: count));
       }
     }
     return entries;
@@ -274,29 +347,15 @@ class _BookingScreenState extends State<BookingScreen> {
       if (_digitMode == DigitMode.two) {
         final lsks = action == 'ALL' ? ['AB', 'AC', 'BC'] : [action];
         for (final lsk in lsks) {
-          entries.add(BookingEntry(
-              lsk: lsk,
-              number: numStr,
-              count: count,
-              dAmount: calcD(count),
-              cAmount: calcC(count)));
+          entries.add(BookingEntry(lsk: lsk, number: numStr, count: count));
         }
       } else {
         if (action == 'BOX' || action == 'BOTH') {
-          entries.add(BookingEntry(
-              lsk: 'Box',
-              number: numStr,
-              count: count,
-              dAmount: calcD(count),
-              cAmount: calcC(count)));
+          entries.add(BookingEntry(lsk: 'Box', number: numStr, count: count));
         }
         if (action == 'SUPER' || action == 'BOTH') {
-          entries.add(BookingEntry(
-              lsk: 'Super',
-              number: numStr,
-              count: count,
-              dAmount: calcD(count, rate: 9),
-              cAmount: calcC(count, rate: 10)));
+          entries
+              .add(BookingEntry(lsk: 'Super', number: numStr, count: count));
         }
       }
     }
@@ -306,31 +365,21 @@ class _BookingScreenState extends State<BookingScreen> {
   List<BookingEntry> _generateSet(String number, int superCount, int boxCount) {
     final digits = number.split('');
     if (digits.length != 3) return [];
-    // Deduplicate by the joined string — List.toSet() compares by reference,
-    // not value, so '111' → ['1','1','1'] would still produce 3 identical perms.
+    // Deduplicate by joined string — List.toSet() compares by reference, not
+    // value, so '111' → ['1','1','1'] would produce 3 identical permutations.
     final seen = <String>{};
     final perms = _permutations(digits)
-        .where(
-            (p) => seen.add(p.join())) // add returns false if already present
+        .where((p) => seen.add(p.join()))
         .toList();
     final entries = <BookingEntry>[];
     for (final perm in perms) {
       final numStr = perm.join();
       if (boxCount > 0) {
-        entries.add(BookingEntry(
-            lsk: 'Box',
-            number: numStr,
-            count: boxCount,
-            dAmount: calcD(boxCount),
-            cAmount: calcC(boxCount)));
+        entries.add(BookingEntry(lsk: 'Box', number: numStr, count: boxCount));
       }
       if (superCount > 0) {
-        entries.add(BookingEntry(
-            lsk: 'Super',
-            number: numStr,
-            count: superCount,
-            dAmount: calcD(superCount, rate: 9),
-            cAmount: calcC(superCount, rate: 10)));
+        entries
+            .add(BookingEntry(lsk: 'Super', number: numStr, count: superCount));
       }
     }
     return entries;
@@ -343,20 +392,10 @@ class _BookingScreenState extends State<BookingScreen> {
     for (int n = first; n <= end; n += 10) {
       final numStr = n.toString().padLeft(3, '0');
       if (action == 'BOX' || action == 'BOTH') {
-        entries.add(BookingEntry(
-            lsk: 'Box',
-            number: numStr,
-            count: count,
-            dAmount: calcD(count),
-            cAmount: calcC(count)));
+        entries.add(BookingEntry(lsk: 'Box', number: numStr, count: count));
       }
       if (action == 'SUPER' || action == 'BOTH') {
-        entries.add(BookingEntry(
-            lsk: 'Super',
-            number: numStr,
-            count: count,
-            dAmount: calcD(count, rate: 9),
-            cAmount: calcC(count, rate: 10)));
+        entries.add(BookingEntry(lsk: 'Super', number: numStr, count: count));
       }
     }
     return entries;
@@ -369,20 +408,10 @@ class _BookingScreenState extends State<BookingScreen> {
     for (int n = first; n <= end; n += 100) {
       final numStr = n.toString().padLeft(3, '0');
       if (action == 'BOX' || action == 'BOTH') {
-        entries.add(BookingEntry(
-            lsk: 'Box',
-            number: numStr,
-            count: count,
-            dAmount: calcD(count),
-            cAmount: calcC(count)));
+        entries.add(BookingEntry(lsk: 'Box', number: numStr, count: count));
       }
       if (action == 'SUPER' || action == 'BOTH') {
-        entries.add(BookingEntry(
-            lsk: 'Super',
-            number: numStr,
-            count: count,
-            dAmount: calcD(count, rate: 9),
-            cAmount: calcC(count, rate: 10)));
+        entries.add(BookingEntry(lsk: 'Super', number: numStr, count: count));
       }
     }
     return entries;
@@ -396,20 +425,10 @@ class _BookingScreenState extends State<BookingScreen> {
       if (n < start || n > end) continue;
       final numStr = n.toString().padLeft(3, '0');
       if (action == 'BOX' || action == 'BOTH') {
-        entries.add(BookingEntry(
-            lsk: 'Box',
-            number: numStr,
-            count: count,
-            dAmount: calcD(count),
-            cAmount: calcC(count)));
+        entries.add(BookingEntry(lsk: 'Box', number: numStr, count: count));
       }
       if (action == 'SUPER' || action == 'BOTH') {
-        entries.add(BookingEntry(
-            lsk: 'Super',
-            number: numStr,
-            count: count,
-            dAmount: calcD(count, rate: 9),
-            cAmount: calcC(count, rate: 10)));
+        entries.add(BookingEntry(lsk: 'Super', number: numStr, count: count));
       }
     }
     return entries;
@@ -436,16 +455,22 @@ class _BookingScreenState extends State<BookingScreen> {
 
   void _deleteEntry(int index) => setState(() => _entries.removeAt(index));
 
-  int get _totalCount => _entries.fold(0, (s, e) => s + e.count);
-  int get _totalCAmount => _entries.fold(0, (s, e) => s + e.cAmount);
-  int get _totalDAmount => _entries.fold(0, (s, e) => s + e.dAmount);
+  int    get _totalCount   => _entries.fold(0,   (s, e) => s + e.count);
+  double get _totalCAmount => _entries.fold(0.0, (s, e) => s + _cAmount(e));
+  double get _totalDAmount => _entries.fold(0.0, (s, e) => s + _dAmount(e));
 
-  // ── Save dialog ────────────────────────────────────────────────────────────
+  // ── Save flow ───────────────────────────────────────────────────────────────
 
   void _showDealerPicker(Color accentColor) {
+    if (_dealersLoading) return; // still fetching — ignore tap
+    if (_dealersError != null) {
+      _fetchDealers(); // tap retries the fetch
+      return;
+    }
     showDialog(
       context: context,
       builder: (ctx) => _DealerPickerDialog(
+        dealers: _dealers,
         selectedDealer: _selectedDealer,
         accentColor: accentColor,
         onSelected: (dealer) {
@@ -464,7 +489,16 @@ class _BookingScreenState extends State<BookingScreen> {
         accentColor: accentColor,
         headerColors: [accentColor, accentColor],
         duration: const Duration(seconds: 2),
-        isError: false,
+      );
+      return;
+    }
+    if (_selectedDealer == null) {
+      _showResultBanner(
+        message: 'Please select a dealer before saving.',
+        icon: Icons.person_outline_rounded,
+        accentColor: accentColor,
+        headerColors: [accentColor, accentColor],
+        duration: const Duration(seconds: 2),
       );
       return;
     }
@@ -473,9 +507,10 @@ class _BookingScreenState extends State<BookingScreen> {
       builder: (ctx) => _SaveConfirmDialog(
         entryCount: _entries.length,
         totalCount: _totalCount,
-        totalCAmount: _totalCAmount,
-        totalDAmount: _totalDAmount,
+        totalCAmount: _fmtAmt(_totalCAmount),
+        totalDAmount: _fmtAmt(_totalDAmount),
         gameName: widget.gameName,
+        dealerName: _selectedDealer!.name,
         headerColors: headerColors,
         accentColor: accentColor,
         onConfirm: () {
@@ -488,41 +523,37 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> _submitSave(Color accentColor, List<Color> headerColors) async {
-    // Show saving indicator
     _showResultBanner(
       message: 'Saving ${_entries.length} entries...',
       icon: Icons.hourglass_top_rounded,
       accentColor: accentColor,
       headerColors: headerColors,
-      duration: const Duration(seconds: 2),
-      isError: false,
+      duration: const Duration(seconds: 30), // dismissed on completion
     );
 
-    // TODO: Replace with actual API call
-    await Future.delayed(const Duration(milliseconds: 1400));
-
-    // Simulate success (false = success, true = error for testing)
-    const apiError = false;
-
-    if (!mounted) return;
-
-    if (apiError) {
-      _showResultBanner(
-        message: 'Save failed. Please try again.',
-        icon: Icons.error_outline_rounded,
-        accentColor: const Color(0xFFDA3633),
-        headerColors: [const Color(0xFFDA3633), const Color(0xFFB91C1C)],
-        duration: const Duration(seconds: 4),
-        isError: true,
+    try {
+      // TODO: API call — POST /api/v1/bookings/
+      // Prices are intentionally excluded from the payload; the server
+      // calculates D.Amount and C.Amount from the dealer's stored package.
+      final result = await BookingService.createBooking(
+        gameId: widget.gameId,
+        dealerId: _selectedDealer!.id,
+        tickets: _entries
+            .map((e) =>
+                TicketPayload(lsk: e.lsk, number: e.number, count: e.count))
+            .toList(),
       );
-    } else {
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       _showResultBanner(
-        message: '${_entries.length} entries saved successfully.',
+        message:
+            '${result.ticketCount} entries saved · ₹${result.totalCAmount}',
         icon: Icons.check_circle_rounded,
         accentColor: const Color(0xFF3FB950),
         headerColors: [const Color(0xFF238636), const Color(0xFF1A6326)],
         duration: const Duration(seconds: 3),
-        isError: false,
         onDismissed: () {
           if (mounted) {
             context.go(
@@ -530,6 +561,16 @@ class _BookingScreenState extends State<BookingScreen> {
             );
           }
         },
+      );
+    } on BookingException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      _showResultBanner(
+        message: e.message,
+        icon: Icons.error_outline_rounded,
+        accentColor: AppColors.dashboardLogout,
+        headerColors: [AppColors.dashboardLogout, const Color(0xFFB91C1C)],
+        duration: const Duration(seconds: 4),
       );
     }
   }
@@ -540,7 +581,6 @@ class _BookingScreenState extends State<BookingScreen> {
     required Color accentColor,
     required List<Color> headerColors,
     required Duration duration,
-    required bool isError,
     VoidCallback? onDismissed,
   }) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -554,7 +594,8 @@ class _BookingScreenState extends State<BookingScreen> {
             backgroundColor: Colors.transparent,
             elevation: 0,
             content: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.centerLeft,
@@ -595,7 +636,7 @@ class _BookingScreenState extends State<BookingScreen> {
         .then((_) => onDismissed?.call());
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
+  // ── Lifecycle ───────────────────────────────────────────────────────────────
 
   @override
   void initState() {
@@ -603,6 +644,7 @@ class _BookingScreenState extends State<BookingScreen> {
     if (!_availableBookTypes.contains(_bookType)) {
       _bookType = _availableBookTypes.first;
     }
+    _fetchDealers();
   }
 
   @override
@@ -615,6 +657,8 @@ class _BookingScreenState extends State<BookingScreen> {
     _field3Focus.dispose();
     super.dispose();
   }
+
+  // ── Build ───────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -660,7 +704,7 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  // ── Top controls ───────────────────────────────────────────────────────────
+  // ── Top controls ────────────────────────────────────────────────────────────
 
   Widget _buildTopControls(Color accentColor) {
     return Container(
@@ -673,22 +717,17 @@ class _BookingScreenState extends State<BookingScreen> {
             onTap: () => _showDealerPicker(accentColor),
             child: Row(
               children: [
-                Text('Dealer',
-                    style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.dashboardTextSub,
-                        letterSpacing: 1.0)),
-                const Spacer(),
-                Text(
-                  _selectedDealer,
+                const Text(
+                  'Dealer',
                   style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: _selectedDealer == 'Dealer'
-                          ? AppColors.dashboardTextDim
-                          : AppColors.dashboardTextPrim),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.dashboardTextSub,
+                    letterSpacing: 1.0,
+                  ),
                 ),
+                const Spacer(),
+                _buildDealerTrailing(accentColor),
                 const SizedBox(width: 4),
                 const Icon(Icons.chevron_right,
                     size: 18, color: AppColors.dashboardTextDim),
@@ -696,7 +735,7 @@ class _BookingScreenState extends State<BookingScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          // Digit radios + book type
+          // Digit radios + book type dropdown
           Row(
             children: [
               for (final mode in DigitMode.values) ...[
@@ -729,11 +768,14 @@ class _BookingScreenState extends State<BookingScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(_bookType.label,
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: accentColor)),
+                      Text(
+                        _bookType.label,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: accentColor,
+                        ),
+                      ),
                       const SizedBox(width: 5),
                       Icon(Icons.keyboard_arrow_down_rounded,
                           size: 16, color: accentColor),
@@ -744,6 +786,47 @@ class _BookingScreenState extends State<BookingScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDealerTrailing(Color accentColor) {
+    if (_dealersLoading) {
+      return SizedBox(
+        width: 16,
+        height: 16,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: accentColor,
+        ),
+      );
+    }
+    if (_dealersError != null) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.error_outline_rounded,
+              size: 16, color: AppColors.dashboardLogout),
+          const SizedBox(width: 4),
+          const Text(
+            'Retry',
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.dashboardLogout,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      );
+    }
+    return Text(
+      _selectedDealer?.name ?? 'Select Dealer',
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: _selectedDealer == null
+            ? AppColors.dashboardTextDim
+            : AppColors.dashboardTextPrim,
       ),
     );
   }
@@ -761,8 +844,9 @@ class _BookingScreenState extends State<BookingScreen> {
       context: context,
       color: AppColors.dashboardSurface2,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: AppColors.dashboardBorder, width: 1)),
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.dashboardBorder, width: 1),
+      ),
       position: RelativeRect.fromLTRB(
         offset.dx + button.size.width - 160,
         offset.dy + 130,
@@ -773,12 +857,14 @@ class _BookingScreenState extends State<BookingScreen> {
         final selected = type == _bookType;
         return PopupMenuItem<BookType>(
           value: type,
-          child: Text(type.label,
-              style: TextStyle(
-                color: selected ? accentColor : AppColors.dashboardTextPrim,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-                fontSize: 14,
-              )),
+          child: Text(
+            type.label,
+            style: TextStyle(
+              color: selected ? accentColor : AppColors.dashboardTextPrim,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+              fontSize: 14,
+            ),
+          ),
         );
       }).toList(),
     ).then((selected) {
@@ -791,13 +877,12 @@ class _BookingScreenState extends State<BookingScreen> {
     });
   }
 
-  // ── Input row ──────────────────────────────────────────────────────────────
+  // ── Input row ───────────────────────────────────────────────────────────────
 
   Widget _buildInputRow(Color accentColor) {
     final hints = _fieldHints;
     final show3 = _showThirdField;
     final numMax = _digitCount;
-    // End field uses same digit limit for range modes; Count is unrestricted
     final f2Max = _bookType == BookType.book ? null : numMax;
 
     return Container(
@@ -813,7 +898,7 @@ class _BookingScreenState extends State<BookingScreen> {
             accentColor: accentColor,
             nextFocus: _field2Focus,
             maxLength: numMax,
-            minLength: numMax, // enforce exact digit count
+            minLength: numMax,
           )),
           const SizedBox(width: 10),
           Expanded(
@@ -844,7 +929,7 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  // ── Paste field ────────────────────────────────────────────────────────────
+  // ── Paste field ─────────────────────────────────────────────────────────────
 
   Widget _buildPasteField(Color accentColor) {
     return Container(
@@ -854,27 +939,28 @@ class _BookingScreenState extends State<BookingScreen> {
         enabled: false,
         decoration: InputDecoration(
           hintText: 'Paste Tickets Here',
-          hintStyle:
-              const TextStyle(color: AppColors.dashboardTextDim, fontSize: 13),
+          hintStyle: const TextStyle(
+              color: AppColors.dashboardTextDim, fontSize: 13),
           filled: true,
           fillColor: AppColors.dashboardBg,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: AppColors.dashboardBorder),
+            borderSide:
+                const BorderSide(color: AppColors.dashboardBorder),
           ),
           disabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide:
-                const BorderSide(color: AppColors.dashboardBorder, width: 1),
+            borderSide: const BorderSide(
+                color: AppColors.dashboardBorder, width: 1),
           ),
         ),
       ),
     );
   }
 
-  // ── Action buttons ─────────────────────────────────────────────────────────
+  // ── Action buttons ──────────────────────────────────────────────────────────
 
   Widget _buildActionButtons(Color accentColor) {
     final buttons = _actionButtons;
@@ -901,12 +987,15 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
                 ),
                 alignment: Alignment.center,
-                child: Text(label,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        letterSpacing: 0.8)),
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    letterSpacing: 0.8,
+                  ),
+                ),
               ),
             ),
           ),
@@ -915,7 +1004,7 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  // ── Table header ───────────────────────────────────────────────────────────
+  // ── Table header ────────────────────────────────────────────────────────────
 
   Widget _buildTableHeader(Color accentColor) {
     return Container(
@@ -934,7 +1023,7 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  // ── Table body ─────────────────────────────────────────────────────────────
+  // ── Table body ──────────────────────────────────────────────────────────────
 
   Widget _buildTableBody(Color accentColor) {
     if (_entries.isEmpty) {
@@ -945,11 +1034,14 @@ class _BookingScreenState extends State<BookingScreen> {
             Icon(Icons.receipt_long_rounded,
                 size: 38, color: AppColors.dashboardTextDim),
             const SizedBox(height: 10),
-            const Text('No entries yet',
-                style: TextStyle(
-                    color: AppColors.dashboardTextDim,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500)),
+            const Text(
+              'No entries yet',
+              style: TextStyle(
+                color: AppColors.dashboardTextDim,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       );
@@ -972,18 +1064,22 @@ class _BookingScreenState extends State<BookingScreen> {
             children: [
               _TC(entry.lsk, flex: 2, color: color, bold: true),
               _TC(entry.number, flex: 3, color: color),
-              _TC('${entry.count}', flex: 2, color: AppColors.dashboardTextSub),
-              _TC('${entry.dAmount}',
+              _TC('${entry.count}',
+                  flex: 2, color: AppColors.dashboardTextSub),
+              // Amounts are computed dynamically from the dealer's package
+              _TC(_fmtAmt(_dAmount(entry)),
                   flex: 3, color: AppColors.dashboardTextSub),
-              _TC('${entry.cAmount}',
+              _TC(_fmtAmt(_cAmount(entry)),
                   flex: 3, color: AppColors.dashboardTextSub),
               Expanded(
                 flex: 2,
                 child: GestureDetector(
                   onTap: () => _deleteEntry(index),
-                  child: Icon(Icons.delete_outline_rounded,
-                      size: 20,
-                      color: AppColors.dashboardLogout.withOpacity(0.7)),
+                  child: Icon(
+                    Icons.delete_outline_rounded,
+                    size: 20,
+                    color: AppColors.dashboardLogout.withOpacity(0.7),
+                  ),
                 ),
               ),
             ],
@@ -993,14 +1089,14 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  // ── Footer ─────────────────────────────────────────────────────────────────
+  // ── Footer ──────────────────────────────────────────────────────────────────
 
   Widget _buildFooter(Color accentColor, List<Color> headerColors) {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.dashboardSurface,
-        border:
-            Border(top: BorderSide(color: AppColors.dashboardBorder, width: 1)),
+        border: Border(
+            top: BorderSide(color: AppColors.dashboardBorder, width: 1)),
       ),
       child: Row(
         children: [
@@ -1013,15 +1109,14 @@ class _BookingScreenState extends State<BookingScreen> {
           Expanded(
               child: _FooterStat(
                   label: 'CAMOUNT',
-                  value: '$_totalCAmount',
+                  value: _fmtAmt(_totalCAmount),
                   accentColor: accentColor)),
           Container(width: 1, height: 52, color: AppColors.dashboardBorder),
           Expanded(
               child: _FooterStat(
                   label: 'DAMOUNT',
-                  value: '$_totalDAmount',
+                  value: _fmtAmt(_totalDAmount),
                   accentColor: accentColor)),
-          // Save button
           GestureDetector(
             onTap: () => _onSave(accentColor, headerColors),
             child: Container(
@@ -1040,10 +1135,11 @@ class _BookingScreenState extends State<BookingScreen> {
               child: Text(
                 'Save-${widget.gameName.replaceAll(' ', '')}',
                 style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                    letterSpacing: 0.3),
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                  letterSpacing: 0.3,
+                ),
               ),
             ),
           ),
@@ -1060,9 +1156,10 @@ class _BookingScreenState extends State<BookingScreen> {
 class _SaveConfirmDialog extends StatelessWidget {
   final int entryCount;
   final int totalCount;
-  final int totalCAmount;
-  final int totalDAmount;
+  final String totalCAmount;
+  final String totalDAmount;
   final String gameName;
+  final String dealerName;
   final List<Color> headerColors;
   final Color accentColor;
   final VoidCallback onConfirm;
@@ -1074,6 +1171,7 @@ class _SaveConfirmDialog extends StatelessWidget {
     required this.totalCAmount,
     required this.totalDAmount,
     required this.gameName,
+    required this.dealerName,
     required this.headerColors,
     required this.accentColor,
     required this.onConfirm,
@@ -1095,10 +1193,11 @@ class _SaveConfirmDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Gradient header band
+            // Gradient header
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -1111,30 +1210,36 @@ class _SaveConfirmDialog extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Confirm Save',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800)),
+                  const Text(
+                    'Confirm Save',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text('$entryCount ticket entries for $gameName',
-                      style: TextStyle(
-                          color: Colors.white.withOpacity(0.8), fontSize: 12)),
+                  Text(
+                    '$entryCount entries · $gameName · $dealerName',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
             ),
-            // Summary stats
+            // Stats
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
                   _DialogStat('Total Count', '$totalCount', accentColor),
                   const SizedBox(height: 10),
-                  _DialogStat('Total C.Amount', '$totalCAmount', accentColor),
+                  _DialogStat('Total C.Amount', totalCAmount, accentColor),
                   const SizedBox(height: 10),
-                  _DialogStat('Total D.Amount', '$totalDAmount', accentColor),
+                  _DialogStat('Total D.Amount', totalDAmount, accentColor),
                   const SizedBox(height: 22),
-                  // Buttons
                   Row(
                     children: [
                       Expanded(
@@ -1149,11 +1254,14 @@ class _SaveConfirmDialog extends StatelessWidget {
                                   color: AppColors.dashboardBorder, width: 1),
                             ),
                             alignment: Alignment.center,
-                            child: const Text('Cancel',
-                                style: TextStyle(
-                                    color: AppColors.dashboardTextSub,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14)),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(
+                                color: AppColors.dashboardTextSub,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -1175,15 +1283,18 @@ class _SaveConfirmDialog extends StatelessWidget {
                                   color: accentColor.withOpacity(0.35),
                                   blurRadius: 10,
                                   offset: const Offset(0, 3),
-                                )
+                                ),
                               ],
                             ),
                             alignment: Alignment.center,
-                            child: const Text('Save',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 14)),
+                            child: const Text(
+                              'Save',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -1217,17 +1328,23 @@ class _DialogStat extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text(label,
-              style: const TextStyle(
-                  color: AppColors.dashboardTextSub,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.dashboardTextSub,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           const Spacer(),
-          Text(value,
-              style: TextStyle(
-                  color: accentColor,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            style: TextStyle(
+              color: accentColor,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -1238,30 +1355,14 @@ class _DialogStat extends StatelessWidget {
 // DEALER PICKER DIALOG
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Mock dealer list — will be replaced by API data
-const List<String> _kMockDealers = [
-  'Select Dealer',
-  'Kurukkan',
-  'BLT',
-  'KTA',
-  'SJ',
-  'RANADEV',
-  'AJAYAN',
-  'SELF',
-  'PATHRAM',
-  'SALEEMV',
-  'TB',
-  'AKHII valli',
-  'Anas',
-  'Ambadi',
-];
-
 class _DealerPickerDialog extends StatefulWidget {
-  final String selectedDealer;
+  final List<Dealer> dealers;
+  final Dealer? selectedDealer;
   final Color accentColor;
-  final ValueChanged<String> onSelected;
+  final ValueChanged<Dealer> onSelected;
 
   const _DealerPickerDialog({
+    required this.dealers,
     required this.selectedDealer,
     required this.accentColor,
     required this.onSelected,
@@ -1276,19 +1377,21 @@ class _DealerPickerDialogState extends State<_DealerPickerDialog> {
   final _searchFocus = FocusNode();
   String _query = '';
 
-  List<String> get _filtered {
-    if (_query.isEmpty) return _kMockDealers;
+  List<Dealer> get _filtered {
+    if (_query.isEmpty) return widget.dealers;
     final q = _query.toLowerCase();
-    return _kMockDealers.where((d) => d.toLowerCase().contains(q)).toList();
+    return widget.dealers
+        .where((d) =>
+            d.name.toLowerCase().contains(q) ||
+            d.code.toLowerCase().contains(q))
+        .toList();
   }
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() {
-      setState(() => _query = _searchController.text);
-    });
-    // Auto-focus search on open
+    _searchController.addListener(
+        () => setState(() => _query = _searchController.text));
     WidgetsBinding.instance.addPostFrameCallback(
         (_) => FocusScope.of(context).requestFocus(_searchFocus));
   }
@@ -1318,13 +1421,12 @@ class _DealerPickerDialogState extends State<_DealerPickerDialog> {
         clipBehavior: Clip.antiAlias,
         child: Column(
           children: [
-            // ── Header ──────────────────────────────────────────────────────
+            // Header
             Container(
               color: AppColors.dashboardSurface,
               padding: const EdgeInsets.fromLTRB(6, 14, 16, 14),
               child: Row(
                 children: [
-                  // Back / close button
                   Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -1339,16 +1441,17 @@ class _DealerPickerDialogState extends State<_DealerPickerDialog> {
                   ),
                   const SizedBox(width: 4),
                   const Text(
-                    'Dealer',
+                    'Select Dealer',
                     style: TextStyle(
-                        color: AppColors.dashboardTextPrim,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700),
+                      color: AppColors.dashboardTextPrim,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
             ),
-            // ── Search bar ──────────────────────────────────────────────────
+            // Search bar
             Container(
               color: AppColors.dashboardSurface,
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -1358,14 +1461,15 @@ class _DealerPickerDialogState extends State<_DealerPickerDialog> {
                 style: const TextStyle(
                     color: AppColors.dashboardTextPrim, fontSize: 15),
                 decoration: InputDecoration(
-                  hintText: 'Search Dealer',
+                  hintText: 'Search by name or code',
                   hintStyle: const TextStyle(
                       color: AppColors.dashboardTextDim, fontSize: 15),
                   prefixIcon: const Icon(Icons.search_rounded,
                       color: AppColors.dashboardTextDim, size: 20),
                   filled: true,
                   fillColor: AppColors.dashboardBg,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 12),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: const BorderSide(
@@ -1373,42 +1477,47 @@ class _DealerPickerDialogState extends State<_DealerPickerDialog> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide:
-                        BorderSide(color: widget.accentColor, width: 1.5),
+                    borderSide: BorderSide(
+                        color: widget.accentColor, width: 1.5),
                   ),
                 ),
               ),
             ),
             Container(height: 1, color: AppColors.dashboardBorder),
-            // ── Dealer list ─────────────────────────────────────────────────
+            // Dealer list
             Expanded(
               child: dealers.isEmpty
                   ? const Center(
-                      child: Text('No dealers found',
-                          style: TextStyle(
-                              color: AppColors.dashboardTextDim, fontSize: 14)),
+                      child: Text(
+                        'No dealers found',
+                        style: TextStyle(
+                          color: AppColors.dashboardTextDim,
+                          fontSize: 14,
+                        ),
+                      ),
                     )
                   : ListView.separated(
-                      padding: const EdgeInsets.only(top: 8, bottom: 24),
+                      padding:
+                          const EdgeInsets.only(top: 8, bottom: 24),
                       itemCount: dealers.length,
                       separatorBuilder: (_, __) => Container(
-                          height: 1,
-                          margin: const EdgeInsets.only(left: 56),
-                          color: AppColors.dashboardBorder),
+                        height: 1,
+                        margin: const EdgeInsets.only(left: 56),
+                        color: AppColors.dashboardBorder,
+                      ),
                       itemBuilder: (context, index) {
                         final dealer = dealers[index];
-                        final isSelected = dealer == widget.selectedDealer;
-                        final isPlaceholder = dealer == 'Select Dealer';
+                        final isSelected =
+                            dealer.id == widget.selectedDealer?.id;
 
                         return Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: isPlaceholder
-                                ? null
-                                : () => widget.onSelected(dealer),
+                            onTap: () => widget.onSelected(dealer),
                             highlightColor:
                                 widget.accentColor.withOpacity(0.06),
-                            splashColor: widget.accentColor.withOpacity(0.09),
+                            splashColor:
+                                widget.accentColor.withOpacity(0.09),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 14),
@@ -1416,7 +1525,8 @@ class _DealerPickerDialogState extends State<_DealerPickerDialog> {
                                 children: [
                                   // Radio indicator
                                   AnimatedContainer(
-                                    duration: const Duration(milliseconds: 150),
+                                    duration:
+                                        const Duration(milliseconds: 150),
                                     width: 22,
                                     height: 22,
                                     decoration: BoxDecoration(
@@ -1430,19 +1540,32 @@ class _DealerPickerDialogState extends State<_DealerPickerDialog> {
                                     ),
                                   ),
                                   const SizedBox(width: 18),
-                                  // Name
-                                  Text(
-                                    dealer,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: isSelected
-                                          ? FontWeight.w600
-                                          : FontWeight.w400,
-                                      color: isPlaceholder
-                                          ? AppColors.dashboardTextDim
-                                          : isSelected
-                                              ? AppColors.dashboardTextPrim
-                                              : AppColors.dashboardTextSub,
+                                  // Dealer name + code
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          dealer.name,
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: isSelected
+                                                ? FontWeight.w600
+                                                : FontWeight.w400,
+                                            color: isSelected
+                                                ? AppColors.dashboardTextPrim
+                                                : AppColors.dashboardTextSub,
+                                          ),
+                                        ),
+                                        Text(
+                                          dealer.code,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.dashboardTextDim,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
@@ -1504,19 +1627,22 @@ class _BookingHeader extends StatelessWidget {
                   '/dashboard/$gameId?gameName=${Uri.encodeComponent(gameName)}',
                 ),
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 10),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.chevron_left_rounded,
                           color: Colors.white, size: 22),
                       const SizedBox(width: 2),
-                      Text(gameName,
-                          style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500)),
+                      Text(
+                        gameName,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1527,9 +1653,10 @@ class _BookingHeader extends StatelessWidget {
                 'Sales - $dateStr',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700),
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             Padding(
@@ -1600,21 +1727,22 @@ class _DigitRadio extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 5),
-          Text('$label',
-              style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-                  color: selected
-                      ? AppColors.dashboardTextPrim
-                      : AppColors.dashboardTextSub)),
+          Text(
+            '$label',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+              color: selected
+                  ? AppColors.dashboardTextPrim
+                  : AppColors.dashboardTextSub,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-/// Dark-themed underline text field with exact digit enforcement via
-/// [maxLength] + auto-zero-padding on submit via [minLength].
 class _DarkTextField extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
@@ -1622,7 +1750,7 @@ class _DarkTextField extends StatelessWidget {
   final Color accentColor;
   final FocusNode? nextFocus;
   final int? maxLength;
-  final int? minLength; // zero-pad to this length on focus-out / next
+  final int? minLength;
 
   const _DarkTextField({
     required this.controller,
@@ -1635,7 +1763,6 @@ class _DarkTextField extends StatelessWidget {
   });
 
   void _advance(BuildContext context) {
-    // Zero-pad if needed
     if (minLength != null && controller.text.isNotEmpty) {
       final padded = controller.text.padLeft(minLength!, '0');
       controller.value = controller.value.copyWith(
@@ -1664,15 +1791,17 @@ class _DarkTextField extends StatelessWidget {
           nextFocus != null ? TextInputAction.next : TextInputAction.done,
       onEditingComplete: () => _advance(context),
       style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: AppColors.dashboardTextPrim),
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: AppColors.dashboardTextPrim,
+      ),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle:
-            const TextStyle(color: AppColors.dashboardTextDim, fontSize: 14),
+        hintStyle: const TextStyle(
+            color: AppColors.dashboardTextDim, fontSize: 14),
         enabledBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: AppColors.dashboardBorder, width: 1.5),
+          borderSide:
+              BorderSide(color: AppColors.dashboardBorder, width: 1.5),
         ),
         focusedBorder: UnderlineInputBorder(
           borderSide: BorderSide(color: accentColor, width: 2),
@@ -1685,7 +1814,6 @@ class _DarkTextField extends StatelessWidget {
   }
 }
 
-// Table header cell
 class _TH extends StatelessWidget {
   final String label;
   final int flex;
@@ -1695,16 +1823,18 @@ class _TH extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Expanded(
         flex: flex,
-        child: Text(label,
-            style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: color.withOpacity(0.8),
-                letterSpacing: 0.5)),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: color.withOpacity(0.8),
+            letterSpacing: 0.5,
+          ),
+        ),
       );
 }
 
-// Table data cell
 class _TC extends StatelessWidget {
   final String text;
   final int flex;
@@ -1715,11 +1845,14 @@ class _TC extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Expanded(
         flex: flex,
-        child: Text(text,
-            style: TextStyle(
-                fontSize: 13,
-                fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-                color: color ?? AppColors.dashboardTextPrim)),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+            color: color ?? AppColors.dashboardTextPrim,
+          ),
+        ),
       );
 }
 
@@ -1737,18 +1870,24 @@ class _FooterStat extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.dashboardTextDim,
-                  letterSpacing: 1.0)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              color: AppColors.dashboardTextDim,
+              letterSpacing: 1.0,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(value,
-              style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: accentColor)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: accentColor,
+            ),
+          ),
         ],
       ),
     );
