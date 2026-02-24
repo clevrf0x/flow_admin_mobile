@@ -5,42 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../constants/app_colors.dart';
 import '../../models/game.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MOCK DATA — TODO: Replace with API call
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _TodayEntry {
-  final int no;
-  final String number;
-  final String lsk;
-  final int count;
-
-  const _TodayEntry({
-    required this.no,
-    required this.number,
-    required this.lsk,
-    required this.count,
-  });
-}
-
-const List<_TodayEntry> _kMockEntries = [
-  _TodayEntry(no: 1,  number: '586', lsk: 'SUPER', count: 10),
-  _TodayEntry(no: 2,  number: '586', lsk: 'BOX',   count: 5),
-  _TodayEntry(no: 3,  number: '125', lsk: 'SUPER', count: 20),
-  _TodayEntry(no: 4,  number: '125', lsk: 'BOX',   count: 8),
-  _TodayEntry(no: 5,  number: '340', lsk: 'BOTH',  count: 15),
-  _TodayEntry(no: 6,  number: '77',  lsk: 'AB',    count: 12),
-  _TodayEntry(no: 7,  number: '77',  lsk: 'AC',    count: 6),
-  _TodayEntry(no: 8,  number: '99',  lsk: 'BC',    count: 25),
-  _TodayEntry(no: 9,  number: '5',   lsk: 'A',     count: 30),
-  _TodayEntry(no: 10, number: '5',   lsk: 'B',     count: 18),
-  _TodayEntry(no: 11, number: '3',   lsk: 'C',     count: 22),
-  _TodayEntry(no: 12, number: '812', lsk: 'BOX',   count: 4),
-  _TodayEntry(no: 13, number: '461', lsk: 'SUPER', count: 7),
-  _TodayEntry(no: 14, number: '23',  lsk: 'AB',    count: 9),
-  _TodayEntry(no: 15, number: '908', lsk: 'BOTH',  count: 11),
-];
+import '../../services/today_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SCREEN
@@ -61,6 +26,12 @@ class TodayScreen extends StatefulWidget {
 }
 
 class _TodayScreenState extends State<TodayScreen> {
+  // API state
+  List<TodayEntry> _entries = [];
+  int _totalCountFromApi = 0;
+  bool _isLoading = true;
+  String? _error;
+
   // Filter state
   int _selectedDigit = 0; // 0 = All, 1, 2, 3
   String _selectedLsk = 'ALL';
@@ -82,16 +53,51 @@ class _TodayScreenState extends State<TodayScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _fetchToday();
+  }
+
+  Future<void> _fetchToday() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final summary = await TodayService.fetchToday(widget.gameId);
+      if (!mounted) return;
+      setState(() {
+        _entries = summary.entries;
+        _totalCountFromApi = summary.totalCount;
+        _isLoading = false;
+      });
+    } on TodayException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Could not reach the server. Check your connection.';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
   // Filter entries based on digit mode, LSK type, and search query
-  List<_TodayEntry> get _filteredEntries {
-    return _kMockEntries.where((e) {
+  List<TodayEntry> get _filteredEntries {
+    return _entries.where((e) {
       // Digit filter
-      if (_selectedDigit != 0 && e.number.length != _selectedDigit) return false;
+      if (_selectedDigit != 0 && e.number.length != _selectedDigit)
+        return false;
       // LSK filter
       if (_selectedLsk != 'ALL' && e.lsk != _selectedLsk) return false;
       // Search filter
@@ -104,26 +110,31 @@ class _TodayScreenState extends State<TodayScreen> {
     }).toList();
   }
 
-  int get _totalCount =>
-      _filteredEntries.fold(0, (sum, e) => sum + e.count);
+  int get _totalCount => _filteredEntries.fold(0, (sum, e) => sum + e.count);
 
-  // Total for the summary header (uses all entries regardless of filter)
-  // TODO: Total sales amount comes from API (dealer-specific pricing)
-  int get _grandTotalCount =>
-      _kMockEntries.fold(0, (sum, e) => sum + e.count);
+  // Total for the summary header — uses server's unfiltered total_count
+  int get _grandTotalCount => _totalCountFromApi;
 
   Color _lskColor(String lsk) {
     switch (lsk.toUpperCase()) {
-      case 'AB':    return AppColors.lskAB;
-      case 'AC':    return AppColors.lskAC;
-      case 'BC':    return AppColors.dashboardTextSub;
-      case 'BOX':   return AppColors.lskBox;
-      case 'C':     return AppColors.lskC;
-      case 'BOTH':  return AppColors.lskBoth;
-      case 'SUPER': return AppColors.dashboardTextSub;
-      case 'A':     return AppColors.lskA;
-      case 'B':     return AppColors.lskB;
-      default:      return AppColors.dashboardTextSub;
+      case 'AB':
+        return AppColors.lskAB;
+      case 'AC':
+        return AppColors.lskAC;
+      case 'BC':
+        return AppColors.dashboardTextSub;
+      case 'BOX':
+        return AppColors.lskBox;
+      case 'C':
+        return AppColors.lskC;
+      case 'SUPER':
+        return AppColors.dashboardTextSub;
+      case 'A':
+        return AppColors.lskA;
+      case 'B':
+        return AppColors.lskB;
+      default:
+        return AppColors.dashboardTextSub;
     }
   }
 
@@ -162,23 +173,102 @@ class _TodayScreenState extends State<TodayScreen> {
                 _selectedLsk != 'ALL' ||
                 _searchQuery.isNotEmpty,
           ),
-          // Filter bar
-          _FilterBar(
-            accentColor: accentColor,
-            selectedDigit: _selectedDigit,
-            selectedLsk: _selectedLsk,
-            searchController: _searchController,
-            onDigitChanged: (d) => setState(() => _selectedDigit = d),
-            onLskChanged: (l) => setState(() => _selectedLsk = l),
-            onSearchChanged: (q) => setState(() => _searchQuery = q),
-          ),
-          // Table
+          // Filter bar (hidden while loading/error — no data to filter yet)
+          if (!_isLoading && _error == null)
+            _FilterBar(
+              accentColor: accentColor,
+              selectedDigit: _selectedDigit,
+              selectedLsk: _selectedLsk,
+              searchController: _searchController,
+              onDigitChanged: (d) => setState(() => _selectedDigit = d),
+              onLskChanged: (l) => setState(() => _selectedLsk = l),
+              onSearchChanged: (q) => setState(() => _searchQuery = q),
+            ),
+          // Table / loading / error
           Expanded(
-            child: filtered.isEmpty
-                ? _buildEmptyState(accentColor)
-                : _buildTable(filtered, accentColor),
+            child: _isLoading
+                ? _buildLoadingState(accentColor)
+                : _error != null
+                    ? _buildErrorState(accentColor)
+                    : filtered.isEmpty
+                        ? _buildEmptyState(accentColor)
+                        : _buildTable(filtered, accentColor),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingState(Color accentColor) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Loading today\'s entries…',
+            style: TextStyle(
+              color: AppColors.dashboardTextSub,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(Color accentColor) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.cloud_off_rounded,
+              color: AppColors.dashboardTextDim,
+              size: 48,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _error ?? 'Something went wrong',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.dashboardTextSub,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: _fetchToday,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: accentColor.withOpacity(0.35)),
+                ),
+                child: Text(
+                  'Retry',
+                  style: TextStyle(
+                    color: accentColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -215,7 +305,7 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  Widget _buildTable(List<_TodayEntry> entries, Color accentColor) {
+  Widget _buildTable(List<TodayEntry> entries, Color accentColor) {
     return SingleChildScrollView(
       child: Column(
         children: [
@@ -371,8 +461,8 @@ class _TodayHeader extends StatelessWidget {
                   '/dashboard/$gameId?gameName=${Uri.encodeComponent(gameName)}',
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -521,8 +611,7 @@ class _SummaryCard extends StatelessWidget {
           // Right — filtered count chip, only shown when a filter is active
           if (isFiltered)
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: Colors.black.withOpacity(0.22),
                 borderRadius: BorderRadius.circular(12),
@@ -564,8 +653,18 @@ class _SummaryCard extends StatelessWidget {
   String _weekday(int d) =>
       ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d - 1];
   String _month(int m) => [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec'
       ][m - 1];
 }
 
@@ -583,7 +682,15 @@ class _FilterBar extends StatelessWidget {
   final ValueChanged<String> onSearchChanged;
 
   static const List<String> _lskOptions = [
-    'ALL', 'SUPER', 'BOX', 'BOTH', 'AB', 'AC', 'BC', 'A', 'B', 'C',
+    'ALL',
+    'SUPER',
+    'BOX',
+    'AB',
+    'AC',
+    'BC',
+    'A',
+    'B',
+    'C',
   ];
 
   const _FilterBar({
@@ -773,8 +880,7 @@ class _FilterBar extends StatelessWidget {
                             decoration: BoxDecoration(
                               border: Border(
                                 bottom: BorderSide(
-                                    color: AppColors.dashboardBorder,
-                                    width: 1),
+                                    color: AppColors.dashboardBorder, width: 1),
                               ),
                             ),
                             child: Row(
@@ -837,9 +943,7 @@ class _DigitTab extends StatelessWidget {
         height: 30,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: selected
-              ? accentColor.withOpacity(0.18)
-              : Colors.transparent,
+          color: selected ? accentColor.withOpacity(0.18) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: selected
@@ -860,4 +964,3 @@ class _DigitTab extends StatelessWidget {
     );
   }
 }
-
