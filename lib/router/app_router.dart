@@ -11,6 +11,7 @@ import '../screens/settings/settings_screen.dart';
 import '../screens/today/today_screen.dart';
 import '../screens/add_results/add_results_screen.dart';
 import '../screens/daily_report/daily_report_screen.dart';
+import '../screens/sales_report/sales_report_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/login',
@@ -85,6 +86,14 @@ final appRouter = GoRouter(
         final gameId = state.pathParameters['gameId']!;
         final gameName = state.uri.queryParameters['gameName'] ?? gameId;
         return DailyReportScreen(gameId: gameId, gameName: gameName);
+      },
+    ),
+    GoRoute(
+      path: '/dashboard/:gameId/sales-report',
+      builder: (context, state) {
+        final gameId = state.pathParameters['gameId']!;
+        final gameName = state.uri.queryParameters['gameName'] ?? gameId;
+        return SalesReportScreen(gameId: gameId, gameName: gameName);
       },
     ),
   ],

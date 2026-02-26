@@ -483,6 +483,12 @@ class _MenuRow extends StatelessWidget {
             );
             return;
           }
+          if (item.id == 'sales_report') {
+            context.go(
+              '/dashboard/$gameId/sales-report?gameName=${Uri.encodeComponent(gameName)}',
+            );
+            return;
+          }
           // TODO: Navigate to item.route
         },
         highlightColor: accentColor.withOpacity(0.06),
