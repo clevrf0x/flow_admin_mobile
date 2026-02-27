@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../constants/app_colors.dart';
 import '../../models/game.dart';
+import '../../services/results_service.dart';
 import '../../widgets/common_toast.dart';
 
 // Number of complimentary prize fields
@@ -40,6 +41,7 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
       List.generate(_kCompCount, (_) => FocusNode());
 
   bool _isSaving = false;
+  bool _isLoadingResult = false;
 
   static const List<String> _mainLabels = [
     'First Prize',
@@ -61,6 +63,55 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
     final luminance = headerColors.first.computeLuminance();
     if (luminance < 0.08) return AppColors.gsAccentBlue;
     return headerColors.first;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch any existing results for today on screen open
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchAndFill(_selectedDate);
+    });
+  }
+
+  /// Fetches saved results for [date] and pre-fills all prize fields.
+  /// Clears all fields if no results exist for that date.
+  Future<void> _fetchAndFill(DateTime date) async {
+    setState(() => _isLoadingResult = true);
+
+    try {
+      final result = await ResultsService.fetchResult(
+        gameId: widget.gameId,
+        date: date,
+      );
+
+      if (!mounted) return;
+
+      if (result != null) {
+        // Pre-fill with existing results
+        for (int i = 0; i < 5; i++) {
+          _mainControllers[i].text = result['prize_${i + 1}'] ?? '';
+        }
+        for (int i = 0; i < _kCompCount; i++) {
+          _compControllers[i].text = result['comp_${i + 1}'] ?? '';
+        }
+      } else {
+        // No results saved for this date — clear all fields
+        for (final c in _mainControllers) {
+          c.clear();
+        }
+        for (final c in _compControllers) {
+          c.clear();
+        }
+      }
+    } on ResultsException catch (e) {
+      if (!mounted) return;
+      CommonToast.showError(context, e.message);
+    } catch (_) {
+      // Silently ignore unexpected errors — leave fields as-is
+    } finally {
+      if (mounted) setState(() => _isLoadingResult = false);
+    }
   }
 
   @override
@@ -95,7 +146,10 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
         child: child!,
       ),
     );
-    if (picked != null) setState(() => _selectedDate = picked);
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+      await _fetchAndFill(picked);
+    }
   }
 
   Future<void> _handleSave() async {
@@ -108,20 +162,43 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
 
     setState(() => _isSaving = true);
 
-    // TODO: API call — send _selectedDate, main prizes, comp prizes
-    await Future.delayed(const Duration(milliseconds: 800));
+    // Build named prize map — explicit key names, no positional array risk.
+    // Each key ('prize_1'…'prize_5', 'comp_1'…'comp_30') maps directly to
+    // the server field and DB column of the same name.
+    final prizes = <String, String>{
+      for (int i = 0; i < 5; i++)
+        'prize_${i + 1}': _mainControllers[i].text.trim(),
+      for (int i = 0; i < _kCompCount; i++)
+        'comp_${i + 1}': _compControllers[i].text.trim(),
+    };
 
-    if (!mounted) return;
-    setState(() => _isSaving = false);
+    try {
+      await ResultsService.saveResults(
+        gameId: widget.gameId,
+        date: _selectedDate,
+        prizes: prizes,
+      );
 
-    final game = _game;
-    CommonToast.show(
-      context,
-      message: 'Results saved for ${_formatDate(_selectedDate)}',
-      type: ToastType.success,
-      gradientColors: game?.gradientColors ??
-          [AppColors.primaryBlue, AppColors.primaryBlueDark],
-    );
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+
+      final game = _game;
+      CommonToast.show(
+        context,
+        message: 'Results saved for ${_formatDate(_selectedDate)}',
+        type: ToastType.success,
+        gradientColors: game?.gradientColors ??
+            [AppColors.primaryBlue, AppColors.primaryBlueDark],
+      );
+    } on ResultsException catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      CommonToast.showError(context, e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      CommonToast.showError(context, 'Failed to save results. Please try again.');
+    }
   }
 
   String _formatDate(DateTime date) {
@@ -157,21 +234,36 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
               headerColors: headerColors,
             ),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(14, 18, 14, 28),
+              child: Stack(
                 children: [
-                  // Date picker
-                  _buildDateRow(accentColor),
-                  const SizedBox(height: 16),
-                  // Main prizes card
-                  _buildSectionLabel('MAIN PRIZES'),
-                  const SizedBox(height: 8),
-                  _buildMainPrizesCard(accentColor),
-                  const SizedBox(height: 20),
-                  // Complimentary prizes card
-                  _buildSectionLabel('COMPLIMENTARY PRIZES'),
-                  const SizedBox(height: 8),
-                  _buildCompPrizesCard(accentColor),
+                  ListView(
+                    padding: const EdgeInsets.fromLTRB(14, 18, 14, 28),
+                    children: [
+                      // Date picker
+                      _buildDateRow(accentColor),
+                      const SizedBox(height: 16),
+                      // Main prizes card
+                      _buildSectionLabel('MAIN PRIZES'),
+                      const SizedBox(height: 8),
+                      _buildMainPrizesCard(accentColor),
+                      const SizedBox(height: 20),
+                      // Complimentary prizes card
+                      _buildSectionLabel('COMPLIMENTARY PRIZES'),
+                      const SizedBox(height: 8),
+                      _buildCompPrizesCard(accentColor),
+                    ],
+                  ),
+                  // Loading overlay while fetching existing results
+                  if (_isLoadingResult)
+                    Container(
+                      color: AppColors.dashboardBg.withOpacity(0.75),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: accentColor,
+                          strokeWidth: 2.5,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -547,7 +639,7 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
-          onTap: _isSaving ? null : _handleSave,
+          onTap: (_isSaving || _isLoadingResult) ? null : _handleSave,
           borderRadius: BorderRadius.circular(12),
           child: Ink(
             decoration: BoxDecoration(
