@@ -46,11 +46,7 @@ class _TodayScreenState extends State<TodayScreen> {
     }
   }
 
-  Color _resolvedAccentColor(List<Color> headerColors) {
-    final luminance = headerColors.first.computeLuminance();
-    if (luminance < 0.08) return AppColors.gsAccentBlue;
-    return headerColors.first;
-  }
+  // Accent color is now the same as header color (solid)
 
   @override
   void initState() {
@@ -140,17 +136,16 @@ class _TodayScreenState extends State<TodayScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Light theme — dark status bar icons on light background
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,
       ),
     );
 
     final game = _game;
-    final headerColors = game?.gradientColors ??
-        [AppColors.primaryBlue, AppColors.primaryBlueDark];
-    final accentColor = _resolvedAccentColor(headerColors);
+    final headerColor = game?.headerColor ?? AppColors.primaryBlue;
     final filtered = _filteredEntries;
 
     return Scaffold(
@@ -161,12 +156,11 @@ class _TodayScreenState extends State<TodayScreen> {
           _TodayHeader(
             gameName: widget.gameName,
             gameId: widget.gameId,
-            headerColors: headerColors,
+            headerColor: headerColor,
           ),
           // Summary card
           _SummaryCard(
-            headerColors: headerColors,
-            accentColor: accentColor,
+            headerColor: headerColor,
             totalCount: _grandTotalCount,
             filteredCount: _totalCount,
             isFiltered: _selectedDigit != 0 ||
@@ -176,7 +170,7 @@ class _TodayScreenState extends State<TodayScreen> {
           // Filter bar (hidden while loading/error — no data to filter yet)
           if (!_isLoading && _error == null)
             _FilterBar(
-              accentColor: accentColor,
+              accentColor: headerColor,
               selectedDigit: _selectedDigit,
               selectedLsk: _selectedLsk,
               searchController: _searchController,
@@ -187,12 +181,12 @@ class _TodayScreenState extends State<TodayScreen> {
           // Table / loading / error
           Expanded(
             child: _isLoading
-                ? _buildLoadingState(accentColor)
+                ? _buildLoadingState(headerColor)
                 : _error != null
-                    ? _buildErrorState(accentColor)
+                    ? _buildErrorState(headerColor)
                     : filtered.isEmpty
-                        ? _buildEmptyState(accentColor)
-                        : _buildTable(filtered, accentColor),
+                        ? _buildEmptyState(headerColor)
+                        : _buildTable(filtered, headerColor),
           ),
         ],
       ),
@@ -425,12 +419,12 @@ class _TodayScreenState extends State<TodayScreen> {
 class _TodayHeader extends StatelessWidget {
   final String gameName;
   final String gameId;
-  final List<Color> headerColors;
+  final Color headerColor;
 
   const _TodayHeader({
     required this.gameName,
     required this.gameId,
-    required this.headerColors,
+    required this.headerColor,
   });
 
   @override
@@ -438,15 +432,7 @@ class _TodayHeader extends StatelessWidget {
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: headerColors.length >= 2
-              ? [headerColors[0], headerColors.last]
-              : [headerColors[0], headerColors[0]],
-        ),
-      ),
+      color: headerColor,
       child: Padding(
         padding: EdgeInsets.fromLTRB(6, statusBarHeight + 4, 16, 14),
         child: Row(
@@ -529,15 +515,13 @@ class _TodayHeader extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _SummaryCard extends StatelessWidget {
-  final List<Color> headerColors;
-  final Color accentColor;
+  final Color headerColor;
   final int totalCount;
   final int filteredCount;
   final bool isFiltered;
 
   const _SummaryCard({
-    required this.headerColors,
-    required this.accentColor,
+    required this.headerColor,
     required this.totalCount,
     required this.filteredCount,
     required this.isFiltered,
@@ -550,16 +534,8 @@ class _SummaryCard extends StatelessWidget {
         '${_weekday(now.weekday)}, ${now.day} ${_month(now.month)} ${now.year}';
 
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: headerColors.length >= 2
-              ? [headerColors[0], headerColors.last]
-              : [headerColors[0], headerColors[0]],
-        ),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+      color: headerColor,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [

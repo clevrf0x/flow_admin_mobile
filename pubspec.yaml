@@ -35,6 +35,22 @@ dev_dependencies:
   flutter_lints: ^3.0.0
   build_runner: ^2.4.0
   riverpod_generator: ^2.4.0
+  flutter_launcher_icons: ^0.14.3
+
+# ─── Launcher icon config ──────────────────────────────────────────────────────
+# Place a 1024×1024 PNG at assets/icon/app_icon.png then run:
+#   dart run flutter_launcher_icons
+#
+# Design reference — matches the login screen logo:
+#   Blue gradient rounded square (#2E9AEC → #1565A0) with white layers icon.
+# ──────────────────────────────────────────────────────────────────────────────
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#1565A0"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
 
 flutter:
   uses-material-design: true

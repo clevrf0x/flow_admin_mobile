@@ -115,11 +115,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
     }
   }
 
-  Color _resolvedAccentColor(List<Color> headerColors) {
-    final luminance = headerColors.first.computeLuminance();
-    if (luminance < 0.08) return AppColors.gsAccentBlue;
-    return headerColors.first;
-  }
+  // Header color is used for theming (solid color, no gradient)
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   @override
@@ -271,9 +267,9 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
 
   // ── Delete handlers ────────────────────────────────────────────────────────
 
-  Future<void> _deleteBooking(int bookingId, List<Color> headerColors) async {
+  Future<void> _deleteBooking(int bookingId, Color headerColor) async {
     final confirmed = await _showDeleteDialog(
-      headerColors: headerColors,
+      headerColor: headerColor,
       title:        'Delete Booking',
       subtitle:     'Booking #$bookingId',
       body:         'This will permanently delete the booking and all its ticket entries. This action cannot be undone.',
@@ -284,7 +280,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
     // from stacking loading toasts behind lingering success/error toasts.
     ScaffoldMessenger.of(context).clearSnackBars();
     CommonToast.showLoading(context, 'Deleting booking…',
-        gradientColors: [headerColors.first, headerColors.last]);
+        backgroundColor: headerColor);
 
     try {
       await SalesReportService.deleteBooking(bookingId);
@@ -303,9 +299,9 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
     }
   }
 
-  Future<void> _deleteEntry(int entryId, String label, List<Color> headerColors) async {
+  Future<void> _deleteEntry(int entryId, String label, Color headerColor) async {
     final confirmed = await _showDeleteDialog(
-      headerColors: headerColors,
+      headerColor: headerColor,
       title:        'Delete Entry',
       subtitle:     label,
       body:         'This will permanently delete this ticket entry. If it is the only entry in the booking, the booking will also be removed.',
@@ -314,7 +310,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
 
     ScaffoldMessenger.of(context).clearSnackBars();
     CommonToast.showLoading(context, 'Deleting entry…',
-        gradientColors: [headerColors.first, headerColors.last]);
+        backgroundColor: headerColor);
 
     try {
       await SalesReportService.deleteEntry(entryId);
@@ -336,7 +332,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
   /// Shows a themed confirmation dialog.
   /// Returns [true] if the user confirmed, [false] if cancelled.
   Future<bool> _showDeleteDialog({
-    required List<Color> headerColors,
+    required Color headerColor,
     required String title,
     required String subtitle,
     required String body,
@@ -355,15 +351,11 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ── Gradient header band ──────────────────────────────────────
+              // ── Solid color header band ──────────────────────────────────────
               Container(
                 height: 6,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [headerColors.first, headerColors.last],
-                    begin:  Alignment.topLeft,
-                    end:    Alignment.bottomRight,
-                  ),
+                  color: headerColor,
                   borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(18)),
                 ),
@@ -505,7 +497,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
 
   // ── Date picker ────────────────────────────────────────────────────────────
   Future<void> _pickDate(BuildContext context, bool isStart,
-      Color accentColor) async {
+      Color headerColor) async {
     final initial   = isStart ? _startDate : _endDate;
     final firstDate = DateTime(2020);
     final lastDate  = DateTime(2030);
@@ -518,7 +510,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
       builder: (ctx, child) => Theme(
         data: ThemeData.dark().copyWith(
           colorScheme: ColorScheme.dark(
-            primary:   accentColor,
+            primary:   headerColor,
             onPrimary: Colors.white,
             surface:   AppColors.dashboardSurface,
           ),
@@ -566,48 +558,38 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
       ),
     );
 
-    final game         = _game;
-    final headerColors = game?.gradientColors ??
-        [AppColors.primaryBlue, AppColors.primaryBlueDark];
-    final accentColor  = _resolvedAccentColor(headerColors);
+    final game        = _game;
+    final headerColor = game?.headerColor ?? AppColors.primaryBlue;
 
     return Scaffold(
       backgroundColor: AppColors.dashboardBg,
       body: Column(
         children: [
-          // ── Gradient block: header + summary card ──────────────────────────
-          _buildGradientBlock(headerColors, accentColor),
+          // ── Header block: header + summary card ──────────────────────────
+          _buildHeaderBlock(headerColor),
           // ── Filter bar ────────────────────────────────────────────────────
-          _buildFilterBar(headerColors, accentColor),
+          _buildFilterBar(headerColor),
           // ── Content ───────────────────────────────────────────────────────
           Expanded(
             child: _initialLoading
-                ? _buildLoadingState(accentColor)
+                ? _buildLoadingState(headerColor)
                 : _error != null && _report == null
-                    ? _buildErrorState(accentColor)
+                    ? _buildErrorState(headerColor)
                     : _report!.bookings.isEmpty
-                        ? _buildEmptyState(accentColor)
-                        : _buildTable(headerColors, accentColor),
+                        ? _buildEmptyState(headerColor)
+                        : _buildTable(headerColor),
           ),
         ],
       ),
     );
   }
 
-  // ── Gradient header + summary block ───────────────────────────────────────
-  Widget _buildGradientBlock(List<Color> headerColors, Color accentColor) {
+  // ── Header block + summary block ───────────────────────────────────────
+  Widget _buildHeaderBlock(Color headerColor) {
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end:   Alignment.bottomRight,
-          colors: headerColors.length >= 2
-              ? [headerColors[0], headerColors.last]
-              : [headerColors[0], headerColors[0]],
-        ),
-      ),
+      color: headerColor,
       child: Column(
         children: [
           // Universal header row
@@ -792,7 +774,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
   }
 
   // ── Filter bar ─────────────────────────────────────────────────────────────
-  Widget _buildFilterBar(List<Color> headerColors, Color accentColor) {
+  Widget _buildFilterBar(Color headerColor) {
     return Container(
       color: AppColors.dashboardSurface,
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
@@ -803,17 +785,17 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
           Row(
             children: [
               // Dealer picker
-              Expanded(child: _buildDealerPicker(accentColor)),
+              Expanded(child: _buildDealerPicker(headerColor)),
               const SizedBox(width: 8),
               // Expand/Summary toggle
-              _buildExpandToggle(accentColor),
+              _buildExpandToggle(headerColor),
             ],
           ),
           const SizedBox(height: 8),
           // Row 2: Digit tabs
-          _buildDigitTabs(accentColor),
+          _buildDigitTabs(headerColor),
           // Row 2b: LSK sub-type checkboxes — animated in/out per digit selection
-          _buildLskChips(accentColor),
+          _buildLskChips(headerColor),
           const SizedBox(height: 8),
           // Row 3: Date range + SEARCH
           Row(
@@ -824,8 +806,8 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                   context:     context,
                   date:        _startDate,
                   label:       'From',
-                  accentColor: accentColor,
-                  onTap:       () => _pickDate(context, true, accentColor),
+                  accentColor: headerColor,
+                  onTap:       () => _pickDate(context, true, headerColor),
                 ),
               ),
               Padding(
@@ -844,8 +826,8 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                   context:     context,
                   date:        _endDate,
                   label:       'To',
-                  accentColor: accentColor,
-                  onTap:       () => _pickDate(context, false, accentColor),
+                  accentColor: headerColor,
+                  onTap:       () => _pickDate(context, false, headerColor),
                 ),
               ),
               const SizedBox(width: 8),
@@ -856,11 +838,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                   height: 36,
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin:  Alignment.topLeft,
-                      end:    Alignment.bottomRight,
-                      colors: [headerColors.first, headerColors.last],
-                    ),
+                    color: headerColor,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   alignment: Alignment.center,
@@ -891,9 +869,9 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
     );
   }
 
-  Widget _buildDealerPicker(Color accentColor) {
+  Widget _buildDealerPicker(Color headerColor) {
     return GestureDetector(
-      onTap: () => _showDealerSheet(accentColor),
+      onTap: () => _showDealerSheet(headerColor),
       child: Container(
         height: 36,
         padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -1157,7 +1135,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
     );
   }
 
-  void _showDealerSheet(Color accentColor) {
+  void _showDealerSheet(Color headerColor) {
     final bottomPad = MediaQuery.of(context).padding.bottom;
     showModalBottomSheet(
       context:          context,
@@ -1204,7 +1182,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                         name:       'All Dealers',
                         code:       '',
                         isSelected: _selectedDealer == null,
-                        accentColor: accentColor,
+                        accentColor: headerColor,
                         onTap: () {
                           setState(() => _selectedDealer = null);
                           Navigator.of(ctx).pop();
@@ -1217,7 +1195,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                           name:       _dealers[i].name,
                           code:       _dealers[i].code,
                           isSelected: _selectedDealer?.id == _dealers[i].id,
-                          accentColor: accentColor,
+                          accentColor: headerColor,
                           onTap: () {
                             setState(() => _selectedDealer = _dealers[i]);
                             Navigator.of(ctx).pop();
@@ -1393,9 +1371,9 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
   }
 
   // ── Table ──────────────────────────────────────────────────────────────────
-  Widget _buildTable(List<Color> headerColors, Color accentColor) {
+  Widget _buildTable(Color headerColor) {
     final bookings = _report!.bookings;
-    final flatRows = _buildTableRows(bookings, headerColors, accentColor);
+    final flatRows = _buildTableRows(bookings, headerColor);
 
     // Dealer column is Expanded — fills all remaining screen width — so the
     // table always fits exactly. No horizontal scroll needed.
@@ -1468,17 +1446,17 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
 
   // Booking + entry rows
   List<Widget> _buildTableRows(
-      List<SalesBookingRow> bookings, List<Color> headerColors, Color accentColor) {
+      List<SalesBookingRow> bookings, Color headerColor) {
     final rows = <Widget>[];
 
     for (int i = 0; i < bookings.length; i++) {
       final booking = bookings[i];
       final isEven  = i % 2 == 0;
-      rows.add(_buildBookingRow(booking, isEven, headerColors, accentColor));
+      rows.add(_buildBookingRow(booking, isEven, headerColor));
 
       if (_isExpanded && booking.entries != null) {
         for (final entry in booking.entries!) {
-          rows.add(_buildEntryRow(entry, headerColors, accentColor));
+          rows.add(_buildEntryRow(entry, headerColor));
         }
       }
     }
@@ -1488,7 +1466,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
 
   // One booking summary row
   Widget _buildBookingRow(
-      SalesBookingRow b, bool isEven, List<Color> headerColors, Color accentColor) {
+      SalesBookingRow b, bool isEven, Color headerColor) {
     return Container(
       color: isEven
           ? AppColors.dashboardBg
@@ -1611,7 +1589,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
             width: _kColDel,
             child: Center(
               child: GestureDetector(
-                onTap: () => _deleteBooking(b.id, headerColors),
+                onTap: () => _deleteBooking(b.id, headerColor),
                 child: const Padding(
                   padding: EdgeInsets.all(6),
                   child: Icon(Icons.delete_outline_rounded,
@@ -1626,7 +1604,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
   }
 
   // One ticket entry sub-row (expanded mode)
-  Widget _buildEntryRow(SalesEntryRow e, List<Color> headerColors, Color accentColor) {
+  Widget _buildEntryRow(SalesEntryRow e, Color headerColor) {
     final lskColor = _lskColor(e.lsk);
     // Use Stack so the 3-px left accent stripe is overlaid on top of the row
     // rather than drawn inside the Container (which would steal 3px from the
@@ -1740,7 +1718,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                     onTap: () => _deleteEntry(
                       e.id,
                       '${e.number} · ${e.lsk}',
-                      headerColors,
+                      headerColor,
                     ),
                     child: const Padding(
                       padding: EdgeInsets.all(6),
@@ -1760,7 +1738,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
           bottom: 0,
           child: Container(
             width: 3,
-            color: accentColor.withOpacity(0.45),
+            color: headerColor.withOpacity(0.45),
           ),
         ),
       ],

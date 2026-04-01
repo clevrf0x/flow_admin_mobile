@@ -32,26 +32,23 @@ class DashboardScreen extends StatelessWidget {
   /// color is too dark to be visible against the dark surface background.
   Color _resolvedAccentColor(List<Color> headerColors) {
     final c = headerColors.first;
-    // Compute relative luminance — if too dark, use the app's standard accent
-    final luminance = c.computeLuminance();
-    if (luminance < 0.08) {
-      return AppColors.gsAccentBlue; // bright blue — always visible
-    }
+    // For light theme, use the game color directly as accent
+    // All game colors are visible enough on white/light backgrounds
     return c;
   }
 
   @override
   Widget build(BuildContext context) {
+    // Light theme — dark status bar icons on light background
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,
       ),
     );
 
     final game = _game;
-    final headerColors = game?.gradientColors ??
-        [AppColors.primaryBlue, AppColors.primaryBlueDark];
+    final headerColor = game?.headerColor ?? AppColors.primaryBlue;
 
     return Scaffold(
       backgroundColor: AppColors.dashboardBg,
@@ -60,11 +57,11 @@ class DashboardScreen extends StatelessWidget {
           _DashboardHeader(
             gameName: gameName,
             game: game,
-            headerColors: headerColors,
+            headerColor: headerColor,
           ),
           Expanded(
             child: _DashboardMenuList(
-              accentColor: _resolvedAccentColor(headerColors),
+              accentColor: headerColor,
               gameId: gameId,
               gameName: gameName,
             ),
@@ -82,12 +79,12 @@ class DashboardScreen extends StatelessWidget {
 class _DashboardHeader extends StatelessWidget {
   final String gameName;
   final Game? game;
-  final List<Color> headerColors;
+  final Color headerColor;
 
   const _DashboardHeader({
     required this.gameName,
     required this.game,
-    required this.headerColors,
+    required this.headerColor,
   });
 
   @override
@@ -95,15 +92,7 @@ class _DashboardHeader extends StatelessWidget {
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: headerColors.length >= 2
-              ? [headerColors[0], headerColors.last]
-              : [headerColors[0], headerColors[0]],
-        ),
-      ),
+      color: headerColor,
       child: Stack(
         children: [
           // Content

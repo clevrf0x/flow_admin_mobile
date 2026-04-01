@@ -59,11 +59,7 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
     }
   }
 
-  Color _resolvedAccentColor(List<Color> headerColors) {
-    final luminance = headerColors.first.computeLuminance();
-    if (luminance < 0.08) return AppColors.gsAccentBlue;
-    return headerColors.first;
-  }
+  // Accent color is now the same as header color (solid)
 
   @override
   void initState() {
@@ -125,17 +121,15 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
 
   Future<void> _pickDate() async {
     final game = _game;
-    final accentColor = _resolvedAccentColor(
-      game?.gradientColors ?? [AppColors.primaryBlue],
-    );
+    final accentColor = game?.headerColor ?? AppColors.primaryBlue;
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
       builder: (context, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: ColorScheme.dark(
+        data: ThemeData.light().copyWith(
+          colorScheme: ColorScheme.light(
             primary: accentColor,
             onPrimary: Colors.white,
             surface: AppColors.dashboardSurface,
@@ -187,8 +181,7 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
         context,
         message: 'Results saved for ${_formatDate(_selectedDate)}',
         type: ToastType.success,
-        gradientColors: game?.gradientColors ??
-            [AppColors.primaryBlue, AppColors.primaryBlueDark],
+        backgroundColor: game?.headerColor ?? AppColors.primaryBlue,
       );
     } on ResultsException catch (e) {
       if (!mounted) return;
@@ -209,17 +202,16 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Light theme — dark status bar icons on light background
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,
       ),
     );
 
     final game = _game;
-    final headerColors = game?.gradientColors ??
-        [AppColors.primaryBlue, AppColors.primaryBlueDark];
-    final accentColor = _resolvedAccentColor(headerColors);
+    final headerColor = game?.headerColor ?? AppColors.primaryBlue;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -231,7 +223,7 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
             _AddResultsHeader(
               gameName: widget.gameName,
               gameId: widget.gameId,
-              headerColors: headerColors,
+              headerColor: headerColor,
             ),
             Expanded(
               child: Stack(
@@ -240,17 +232,17 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
                     padding: const EdgeInsets.fromLTRB(14, 18, 14, 28),
                     children: [
                       // Date picker
-                      _buildDateRow(accentColor),
+                      _buildDateRow(headerColor),
                       const SizedBox(height: 16),
                       // Main prizes card
                       _buildSectionLabel('MAIN PRIZES'),
                       const SizedBox(height: 8),
-                      _buildMainPrizesCard(accentColor),
+                      _buildMainPrizesCard(headerColor),
                       const SizedBox(height: 20),
                       // Complimentary prizes card
                       _buildSectionLabel('COMPLIMENTARY PRIZES'),
                       const SizedBox(height: 8),
-                      _buildCompPrizesCard(accentColor),
+                      _buildCompPrizesCard(headerColor),
                     ],
                   ),
                   // Loading overlay while fetching existing results
@@ -259,7 +251,7 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
                       color: AppColors.dashboardBg.withOpacity(0.75),
                       child: Center(
                         child: CircularProgressIndicator(
-                          color: accentColor,
+                          color: headerColor,
                           strokeWidth: 2.5,
                         ),
                       ),
@@ -268,7 +260,7 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
               ),
             ),
             // Save button
-            _buildSaveButton(headerColors),
+            _buildSaveButton(headerColor),
           ],
         ),
       ),
@@ -622,7 +614,7 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
 
   // ── Save button ──────────────────────────────────────────────────────────
 
-  Widget _buildSaveButton(List<Color> headerColors) {
+  Widget _buildSaveButton(Color headerColor) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.dashboardSurface,
@@ -636,53 +628,41 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
         MediaQuery.of(context).padding.bottom + 12,
       ),
       child: Material(
-        color: Colors.transparent,
+        color: headerColor,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: (_isSaving || _isLoadingResult) ? null : _handleSave,
           borderRadius: BorderRadius.circular(12),
-          child: Ink(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: headerColors.length >= 2
-                    ? [headerColors[0], headerColors.last]
-                    : [headerColors[0], headerColors[0]],
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Container(
-              height: 52,
-              alignment: Alignment.center,
-              child: _isSaving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.save_rounded,
-                            color: Colors.white, size: 18),
-                        SizedBox(width: 8),
-                        Text(
-                          'Save Results',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
+          child: Container(
+            height: 52,
+            alignment: Alignment.center,
+            child: _isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
-            ),
+                  )
+                : const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.save_rounded,
+                          color: Colors.white, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'Save Results',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ),
       ),
@@ -697,12 +677,12 @@ class _AddResultsScreenState extends State<AddResultsScreen> {
 class _AddResultsHeader extends StatelessWidget {
   final String gameName;
   final String gameId;
-  final List<Color> headerColors;
+  final Color headerColor;
 
   const _AddResultsHeader({
     required this.gameName,
     required this.gameId,
-    required this.headerColors,
+    required this.headerColor,
   });
 
   @override
@@ -710,15 +690,7 @@ class _AddResultsHeader extends StatelessWidget {
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: headerColors.length >= 2
-              ? [headerColors[0], headerColors.last]
-              : [headerColors[0], headerColors[0]],
-        ),
-      ),
+      color: headerColor,
       child: Padding(
         padding: EdgeInsets.fromLTRB(6, statusBarHeight + 4, 16, 14),
         child: Row(

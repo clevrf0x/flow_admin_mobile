@@ -6,7 +6,7 @@ import 'app_colors.dart';
 class AppTextStyles {
   AppTextStyles._();
 
-  // === LOGIN SCREEN ===
+  // === LOGIN SCREEN (kept as-is) ===
   static const TextStyle loginAppName = TextStyle(
     color: Colors.white,
     fontSize: 28,
@@ -58,28 +58,28 @@ class AppTextStyles {
     fontWeight: FontWeight.w400,
   );
 
-  // === GAME SELECTION SCREEN ===
+  // === GAME SELECTION SCREEN (light theme) ===
   static const TextStyle gsHeaderTitle = TextStyle(
-    color: Colors.white,
+    color: AppColors.dashboardTextPrim,
     fontSize: 18,
     fontWeight: FontWeight.w800,
     letterSpacing: 2.5,
   );
 
   static const TextStyle gsHeaderSubtitle = TextStyle(
-    color: Color(0x99FFFFFF),
+    color: AppColors.dashboardTextSub,
     fontSize: 12,
     fontWeight: FontWeight.w400,
   );
 
   static const TextStyle gsBadgeText = TextStyle(
-    color: Color(0xFF58A6FF),
+    color: AppColors.gsAccentBlue,
     fontSize: 11,
     fontWeight: FontWeight.w700,
     letterSpacing: 1.5,
   );
 
-  // === GAME CARD ===
+  // === GAME CARD (kept white text — cards have dark gradients) ===
   static const TextStyle cardGameName = TextStyle(
     color: Colors.white,
     fontSize: 26,
@@ -115,7 +115,7 @@ class AppTextStyles {
     letterSpacing: -2,
   );
 
-  // === DASHBOARD SCREEN (dark theme) ===
+  // === DASHBOARD SCREEN (light theme) ===
   static const TextStyle dashboardMenuLabel = TextStyle(
     color: AppColors.dashboardTextPrim,
     fontSize: 15,

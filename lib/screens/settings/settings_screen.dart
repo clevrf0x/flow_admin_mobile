@@ -53,11 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Color _resolvedAccentColor(List<Color> headerColors) {
-    final luminance = headerColors.first.computeLuminance();
-    if (luminance < 0.08) return AppColors.gsAccentBlue;
-    return headerColors.first;
-  }
+  // Accent color is now the same as header color (solid)
 
   @override
   void dispose() {
@@ -77,11 +73,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       initialTime: initialTime,
       builder: (context, child) {
         return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: ColorScheme.dark(
-              primary: _resolvedAccentColor(
-                _game?.gradientColors ?? [AppColors.primaryBlue],
-              ),
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: _game?.headerColor ?? AppColors.primaryBlue,
               surface: AppColors.dashboardSurface,
             ),
             dialogBackgroundColor: AppColors.dashboardSurface,
@@ -109,30 +103,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     // Show success toast
     final game = _game;
-    final gradientColors = game?.gradientColors ??
-        [AppColors.primaryBlue, AppColors.primaryBlueDark];
 
     CommonToast.show(
       context,
       message: 'Settings saved successfully',
       type: ToastType.success,
-      gradientColors: gradientColors,
+      backgroundColor: game?.headerColor ?? AppColors.primaryBlue,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Light theme — dark status bar icons on light background
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,
       ),
     );
 
     final game = _game;
-    final headerColors = game?.gradientColors ??
-        [AppColors.primaryBlue, AppColors.primaryBlueDark];
-    final accentColor = _resolvedAccentColor(headerColors);
+    final headerColor = game?.headerColor ?? AppColors.primaryBlue;
 
     return Scaffold(
       backgroundColor: AppColors.dashboardBg,
@@ -141,21 +132,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _SettingsHeader(
             gameName: widget.gameName,
             gameId: widget.gameId,
-            headerColors: headerColors,
+            headerColor: headerColor,
           ),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(14, 18, 14, 28),
               children: [
                 // Time settings group
-                _buildTimeSettingsGroup(accentColor),
+                _buildTimeSettingsGroup(headerColor),
                 const SizedBox(height: 20),
                 // Total Count Settings group
-                _buildTotalCountSettingsGroup(accentColor),
+                _buildTotalCountSettingsGroup(headerColor),
               ],
             ),
           ),
-          _buildSaveButton(headerColors),
+          _buildSaveButton(headerColor),
         ],
       ),
     );
@@ -457,7 +448,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSaveButton(List<Color> gradientColors) {
+  Widget _buildSaveButton(Color headerColor) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.dashboardSurface,
@@ -478,13 +469,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             borderRadius: BorderRadius.circular(12),
             child: Ink(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: gradientColors.length >= 2
-                      ? [gradientColors[0], gradientColors.last]
-                      : [gradientColors[0], gradientColors[0]],
-                ),
+                color: headerColor,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Container(
@@ -525,12 +510,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 class _SettingsHeader extends StatelessWidget {
   final String gameName;
   final String gameId;
-  final List<Color> headerColors;
+  final Color headerColor;
 
   const _SettingsHeader({
     required this.gameName,
     required this.gameId,
-    required this.headerColors,
+    required this.headerColor,
   });
 
   @override
@@ -538,15 +523,7 @@ class _SettingsHeader extends StatelessWidget {
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: headerColors.length >= 2
-              ? [headerColors[0], headerColors.last]
-              : [headerColors[0], headerColors[0]],
-        ),
-      ),
+      color: headerColor,
       child: Padding(
         padding: EdgeInsets.fromLTRB(6, statusBarHeight + 4, 16, 14),
         child: Row(

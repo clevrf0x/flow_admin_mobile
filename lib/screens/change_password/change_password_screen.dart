@@ -49,11 +49,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     }
   }
 
-  Color _resolvedAccentColor(List<Color> headerColors) {
-    final luminance = headerColors.first.computeLuminance();
-    if (luminance < 0.08) return AppColors.gsAccentBlue;
-    return headerColors.first;
-  }
+  // Accent color is now the same as header color (solid)
 
   @override
   void initState() {
@@ -157,17 +153,16 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Light theme — dark status bar icons on light background
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,
       ),
     );
 
     final game = _game;
-    final headerColors = game?.gradientColors ??
-        [AppColors.primaryBlue, AppColors.primaryBlueDark];
-    final accentColor = _resolvedAccentColor(headerColors);
+    final headerColor = game?.headerColor ?? AppColors.primaryBlue;
 
     return Scaffold(
       backgroundColor: AppColors.dashboardBg,
@@ -179,7 +174,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             _ChangePasswordHeader(
               gameName: widget.gameName,
               gameId: widget.gameId,
-              headerColors: headerColors,
+              headerColor: headerColor,
             ),
             Expanded(
               child: SingleChildScrollView(
@@ -195,7 +190,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       isFocused: _currentFocused,
                       isVisible: _currentVisible,
                       placeholder: 'Enter current password',
-                      accentColor: accentColor,
+                      accentColor: headerColor,
                       textInputAction: TextInputAction.next,
                       onEditingComplete: () =>
                           FocusScope.of(context).requestFocus(_newFocus),
@@ -211,7 +206,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       isFocused: _newFocused,
                       isVisible: _newVisible,
                       placeholder: 'Enter new password',
-                      accentColor: accentColor,
+                      accentColor: headerColor,
                       textInputAction: TextInputAction.next,
                       onEditingComplete: () =>
                           FocusScope.of(context).requestFocus(_confirmFocus),
@@ -227,7 +222,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       isFocused: _confirmFocused,
                       isVisible: _confirmVisible,
                       placeholder: 'Re-enter new password',
-                      accentColor: accentColor,
+                      accentColor: headerColor,
                       textInputAction: TextInputAction.done,
                       onEditingComplete: _onSave,
                       onToggleVisibility: () =>
@@ -239,7 +234,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       _buildErrorBanner(_errorMessage!),
                     ],
                     const SizedBox(height: 32),
-                    _buildSaveButton(accentColor),
+                    _buildSaveButton(headerColor),
                   ],
                 ),
               ),
@@ -379,67 +374,46 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     );
   }
 
-  Widget _buildSaveButton(Color accentColor) {
+  Widget _buildSaveButton(Color headerColor) {
     return Material(
       borderRadius: BorderRadius.circular(14),
-      color: Colors.transparent,
+      color: headerColor,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: _isSaving ? null : _onSave,
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [
-                accentColor,
-                accentColor.withOpacity(0.75),
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: accentColor.withOpacity(0.35),
-                blurRadius: 14,
-                spreadRadius: 0,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: Center(
-              child: _isSaving
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2.5,
-                      ),
-                    )
-                  : const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.check_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'SAVE PASSWORD',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 2.0,
-                          ),
-                        ),
-                      ],
+        child: SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: Center(
+            child: _isSaving
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
                     ),
-            ),
+                  )
+                : const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.check_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'SAVE PASSWORD',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 2.0,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ),
       ),
@@ -454,12 +428,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 class _ChangePasswordHeader extends StatelessWidget {
   final String gameName;
   final String gameId;
-  final List<Color> headerColors;
+  final Color headerColor;
 
   const _ChangePasswordHeader({
     required this.gameName,
     required this.gameId,
-    required this.headerColors,
+    required this.headerColor,
   });
 
   @override
@@ -467,15 +441,7 @@ class _ChangePasswordHeader extends StatelessWidget {
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: headerColors.length >= 2
-              ? [headerColors[0], headerColors.last]
-              : [headerColors[0], headerColors[0]],
-        ),
-      ),
+      color: headerColor,
       child: Padding(
         padding: EdgeInsets.fromLTRB(6, statusBarHeight + 4, 16, 14),
         child: Row(

@@ -1,4 +1,4 @@
-package com.example.flow_admin_mobile
+package com.clevrf0x.flow.admin
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // === LOGIN SCREEN ===
+  // === LOGIN SCREEN (kept as-is — already has nice blue gradient) ===
   static const Color loginBgTop = Color(0xFF1B7ACC); // gradient start
   static const Color loginBgMid = Color(0xFF1565A0); // gradient mid
   static const Color loginBgBottom = Color(0xFF0D4A85); // gradient end
@@ -18,75 +18,78 @@ class AppColors {
   static const Color loginButtonStart = Color(0xFF2186D8);
   static const Color loginButtonEnd = Color(0xFF1565A0);
 
-  // === GAME SELECTION SCREEN ===
-  static const Color gsBackground = Color(0xFF0D1117); // dark bg
-  static const Color gsHeader = Color(0xFF161B22); // header bg
-  static const Color gsAccentBlue = Color(0xFF58A6FF); // header icon/badge
+  // === LIGHT THEME — GAME SELECTION & DASHBOARD ===
+  // Light gray/white background (reverted)
+  static const Color gsBackground = Color(0xFFF5F7FA);
+  static const Color gsHeader = Color(0xFFFFFFFF);
+  static const Color gsAccentBlue = Color(0xFF1565C0);
 
-  // === GAME CARD COLORS (each game has its own gradient) ===
-  // 01 PM — Red
-  static const Color game01pmLight = Color(0xFFC0392B);
-  static const Color game01pmMid = Color(0xFF922B21);
-  static const Color game01pmDark = Color(0xFF7B241C);
+  // === GAME CARD COLORS (darker for better contrast) ===
+  // 01 PM — Darker Red
+  static const Color game01pmLight = Color(0xFFD32F2F);
+  static const Color game01pmMid = Color(0xFFB71C1C);
+  static const Color game01pmDark = Color(0xFF7F0000);
 
-  // KL 3 PM — Teal
-  static const Color gameKl3pmLight = Color(0xFF0E7C7B);
-  static const Color gameKl3pmMid = Color(0xFF085F63);
-  static const Color gameKl3pmDark = Color(0xFF054A4B);
+  // KL 3 PM — Darker Teal
+  static const Color gameKl3pmLight = Color(0xFF00897B);
+  static const Color gameKl3pmMid = Color(0xFF00695C);
+  static const Color gameKl3pmDark = Color(0xFF004D40);
 
-  // 06 PM — Purple
-  static const Color game06pmLight = Color(0xFF8E44AD);
-  static const Color game06pmMid = Color(0xFF6C3483);
-  static const Color game06pmDark = Color(0xFF5B2C6F);
+  // 06 PM — Darker Purple
+  static const Color game06pmLight = Color(0xFF7B1FA2);
+  static const Color game06pmMid = Color(0xFF4A148C);
+  static const Color game06pmDark = Color(0xFF311B92);
 
-  // 08 PM — Near Black / Deep Navy
-  static const Color game08pmLight = Color(0xFF1A1A2E);
-  static const Color game08pmMid = Color(0xFF16213E);
-  static const Color game08pmDark = Color(0xFF0F3460);
+  // 08 PM — Navy (lightened from too dark)
+  static const Color game08pmLight = Color(0xFF2C3E50);
+  static const Color game08pmMid = Color(0xFF34495E);
+  static const Color game08pmDark = Color(0xFF5D6D7E);
 
-  // === STATUS BADGE COLORS ===
-  static const Color statusLive = Color(0xFFFF6B6B);
-  static const Color statusOpen = Color(0xFF4ECDC4);
-  static const Color statusSoon = Color(0xFF778CA3);
+  // === STATUS BADGE COLORS (darker for contrast) ===
+  static const Color statusLive = Color(0xFFC62828);
+  static const Color statusOpen = Color(0xFF00897B);
+  static const Color statusSoon = Color(0xFF455A64);
 
-  // === DASHBOARD SCREEN ===
-  static const Color dashboardBg =
-      Color(0xFF0D1117); // dark, matching game selection
-  static const Color dashboardSurface = Color(0xFF161B22); // card/row surface
-  static const Color dashboardSurface2 =
-      Color(0xFF1C2330); // slightly lighter surface
-  static const Color dashboardBorder = Color(0xFF21262D); // subtle borders
-  static const Color dashboardTextPrim = Color(0xFFE6EDF3); // primary text
-  static const Color dashboardTextSub =
-      Color(0xFF8B949E); // secondary/muted text
-  static const Color dashboardTextDim =
-      Color(0xFF484F58); // section headers, very muted
-  static const Color dashboardBlue =
-      Color(0xFF58A6FF); // accent blue (matches gsAccentBlue)
-  static const Color dashboardLogout = Color(0xFFDA3633); // logout button red
+  // === LIGHT THEME — DASHBOARD & SCREENS ===
+  // Main background — light gray (reverted)
+  static const Color dashboardBg = Color(0xFFF5F7FA);
+  // Card/row surface — white (reverted)
+  static const Color dashboardSurface = Color(0xFFFFFFFF);
+  // Slightly off-white for alternating rows (reverted)
+  static const Color dashboardSurface2 = Color(0xFFF8F9FA);
+  // Borders — light gray (reverted)
+  static const Color dashboardBorder = Color(0xFFE1E4E8);
+  // Primary text — darker for better contrast
+  static const Color dashboardTextPrim = Color(0xFF1A1A1A);
+  // Secondary text — darker gray
+  static const Color dashboardTextSub = Color(0xFF424242);
+  // Dim text — medium gray
+  static const Color dashboardTextDim = Color(0xFF616161);
+  // Accent blue — darker
+  static const Color dashboardBlue = Color(0xFF1565C0);
+  // Logout/error red — darker
+  static const Color dashboardLogout = Color(0xFFC62828);
 
-  // Legacy light dashboard colors (kept for reference, not used in new design)
-  static const Color dashboardBgLight = Color(0xFFF5F7FA);
-  static const Color dashboardHeader = Color(0xFFFFFFFF);
-  static const Color dashboardText = Color(0xFF1A1A2E);
+  // Legacy colors (kept for reference)
+  static const Color dashboardBgDark = Color(0xFF0D1117);
+  static const Color dashboardSurfaceDark = Color(0xFF161B22);
 
-  // === BOOKING SCREEN — LSK type colors (match reference screenshots) ===
-  static const Color bookingBg = Color(0xFFF5F7FA); // light bg
-  static const Color bookingInputLine =
-      Color(0xFF1976D2); // blue underline (active)
-  static const Color bookingBtnBg = Color(0xFF0E7C7B); // teal action buttons
+  // === BOOKING SCREEN — Light background reverted ===
+  static const Color bookingBg = Color(0xFFF5F7FA);
+  static const Color bookingInputLine = Color(0xFF1565C0);
+  static const Color bookingBtnBg = Color(0xFF00695C);
   static const Color bookingBtnText = Color(0xFFFFFFFF);
-  static const Color bookingSaveBtn = Color(0xFF0E7C7B);
+  static const Color bookingSaveBtn = Color(0xFF00695C);
   static const Color bookingFooterBg = Color(0xFFF0F0F0);
 
-  // LSK type label colors
-  static const Color lskAB = Color(0xFFE53935); // red/pink
-  static const Color lskAC = Color(0xFFFF8F00); // orange/amber
-  static const Color lskBC = Color(0xFF212121); // near-black
-  static const Color lskA = Color(0xFFE53935);
-  static const Color lskB = Color(0xFFE53935);
-  static const Color lskC = Color(0xFF1976D2); // blue
-  static const Color lskBox = Color(0xFF2E7D32); // green
-  static const Color lskSuper = Color(0xFF212121); // black
-  static const Color lskBoth = Color(0xFF6A1B9A); // purple
+  // LSK type label colors (darker for contrast)
+  static const Color lskAB = Color(0xFFC62828);
+  static const Color lskAC = Color(0xFFEF6C00);
+  static const Color lskBC = Color(0xFF37474F);
+  static const Color lskA = Color(0xFFC62828);
+  static const Color lskB = Color(0xFFC62828);
+  static const Color lskC = Color(0xFF1565C0);
+  static const Color lskBox = Color(0xFF1B5E20);
+  static const Color lskSuper = Color(0xFF37474F);
+  static const Color lskBoth = Color(0xFF4A148C);
 }

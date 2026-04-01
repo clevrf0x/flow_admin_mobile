@@ -25,25 +25,20 @@ class OthersScreen extends StatelessWidget {
     }
   }
 
-  Color _resolvedAccentColor(List<Color> headerColors) {
-    final luminance = headerColors.first.computeLuminance();
-    if (luminance < 0.08) return AppColors.gsAccentBlue;
-    return headerColors.first;
-  }
+  // Accent color is now the same as header color (solid)
 
   @override
   Widget build(BuildContext context) {
+    // Light theme — dark status bar icons on light background
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,
       ),
     );
 
     final game = _game;
-    final headerColors = game?.gradientColors ??
-        [AppColors.primaryBlue, AppColors.primaryBlueDark];
-    final accentColor = _resolvedAccentColor(headerColors);
+    final headerColor = game?.headerColor ?? AppColors.primaryBlue;
 
     return Scaffold(
       backgroundColor: AppColors.dashboardBg,
@@ -52,11 +47,11 @@ class OthersScreen extends StatelessWidget {
           _OthersHeader(
             gameName: gameName,
             gameId: gameId,
-            headerColors: headerColors,
+            headerColor: headerColor,
           ),
           Expanded(
             child: _OthersMenuList(
-              accentColor: accentColor,
+              accentColor: headerColor,
               gameId: gameId,
               gameName: gameName,
             ),
@@ -74,12 +69,12 @@ class OthersScreen extends StatelessWidget {
 class _OthersHeader extends StatelessWidget {
   final String gameName;
   final String gameId;
-  final List<Color> headerColors;
+  final Color headerColor;
 
   const _OthersHeader({
     required this.gameName,
     required this.gameId,
-    required this.headerColors,
+    required this.headerColor,
   });
 
   @override
@@ -87,15 +82,7 @@ class _OthersHeader extends StatelessWidget {
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: headerColors.length >= 2
-              ? [headerColors[0], headerColors.last]
-              : [headerColors[0], headerColors[0]],
-        ),
-      ),
+      color: headerColor,
       child: Padding(
         padding: EdgeInsets.fromLTRB(6, statusBarHeight + 4, 16, 14),
         child: Row(

@@ -63,11 +63,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     }
   }
 
-  Color _resolvedAccentColor(List<Color> headerColors) {
-    final luminance = headerColors.first.computeLuminance();
-    if (luminance < 0.08) return AppColors.gsAccentBlue;
-    return headerColors.first;
-  }
+  // Accent color is now the same as header color (solid)
 
   // ── Formatting ────────────────────────────────────────────────────────────
 
@@ -166,8 +162,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   }
 
   Widget _darkDateTheme(Color accentColor, Widget child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: ColorScheme.dark(
+        data: ThemeData.light().copyWith(
+          colorScheme: ColorScheme.light(
             primary: accentColor,
             onPrimary: Colors.white,
             surface: AppColors.dashboardSurface,
@@ -248,8 +244,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                 orElse: () => null,
               );
           if (g == null) return accentColor;
-          final lum = g.gradientColors.first.computeLuminance();
-          return lum < 0.08 ? AppColors.gsAccentBlue : g.gradientColors.first;
+          // For light theme, use game color directly
+          return g.gradientColors.first;
         },
       ),
     );
@@ -263,17 +259,16 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Light theme — dark status bar icons on light background
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,
       ),
     );
 
     final game = _game;
-    final headerColors = game?.gradientColors ??
-        [AppColors.primaryBlue, AppColors.primaryBlueDark];
-    final accentColor = _resolvedAccentColor(headerColors);
+    final headerColor = game?.headerColor ?? AppColors.primaryBlue;
 
     return Scaffold(
       backgroundColor: AppColors.dashboardBg,
@@ -282,10 +277,10 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
           _DailyReportHeader(
             gameName: widget.gameName,
             gameId: widget.gameId,
-            headerColors: headerColors,
+            headerColor: headerColor,
           ),
-          _buildFiltersPanel(accentColor, headerColors),
-          Expanded(child: _buildBody(accentColor)),
+          _buildFiltersPanel(headerColor),
+          Expanded(child: _buildBody(headerColor)),
         ],
       ),
     );
@@ -293,7 +288,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
 
   // ── Filters panel ─────────────────────────────────────────────────────────
 
-  Widget _buildFiltersPanel(Color accentColor, List<Color> headerColors) {
+  Widget _buildFiltersPanel(Color headerColor) {
     final selectedGameLabel = _selectedGameId == 'all'
         ? 'All Games'
         : (mockGames
@@ -318,12 +313,12 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                   icon: Icons.person_rounded,
                   label: 'Dealer',
                   value: _selectedDealer?.name ?? 'All Dealers',
-                  accentColor: accentColor,
+                  accentColor: headerColor,
                   isActive: _selectedDealer != null,
                   isLoading: _dealersLoading,
                   onTap: _dealers.isEmpty
                       ? null
-                      : () => _showDealerPicker(accentColor),
+                      : () => _showDealerPicker(headerColor),
                 ),
               ),
               const SizedBox(width: 10),
@@ -332,9 +327,9 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                   icon: Icons.sports_esports_rounded,
                   label: 'Game',
                   value: selectedGameLabel,
-                  accentColor: accentColor,
+                  accentColor: headerColor,
                   isActive: _selectedGameId != 'all',
-                  onTap: () => _showGamePicker(accentColor),
+                  onTap: () => _showGamePicker(headerColor),
                 ),
               ),
             ],
@@ -347,8 +342,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                 child: _DateButton(
                   label: 'FROM',
                   date: _fmtDate(_fromDate),
-                  accentColor: accentColor,
-                  onTap: () => _pickFromDate(accentColor),
+                  accentColor: headerColor,
+                  onTap: () => _pickFromDate(headerColor),
                 ),
               ),
               Padding(
@@ -366,8 +361,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                 child: _DateButton(
                   label: 'TO',
                   date: _fmtDate(_toDate),
-                  accentColor: accentColor,
-                  onTap: () => _pickToDate(accentColor),
+                  accentColor: headerColor,
+                  onTap: () => _pickToDate(headerColor),
                 ),
               ),
               const SizedBox(width: 10),
@@ -377,17 +372,11 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                   height: 46,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: headerColors.length >= 2
-                          ? [headerColors[0], headerColors.last]
-                          : [headerColors[0], headerColors[0]],
-                    ),
+                    color: headerColor,
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
-                        color: accentColor.withOpacity(0.30),
+                        color: headerColor.withOpacity(0.25),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -859,27 +848,19 @@ class _DateButton extends StatelessWidget {
 class _DailyReportHeader extends StatelessWidget {
   final String gameName;
   final String gameId;
-  final List<Color> headerColors;
+  final Color headerColor;
 
   const _DailyReportHeader({
     required this.gameName,
     required this.gameId,
-    required this.headerColors,
+    required this.headerColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final statusBarHeight = MediaQuery.of(context).padding.top;
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: headerColors.length >= 2
-              ? [headerColors[0], headerColors.last]
-              : [headerColors[0], headerColors[0]],
-        ),
-      ),
+      color: headerColor,
       child: Padding(
         padding:
             EdgeInsets.fromLTRB(6, statusBarHeight + 4, 16, 14),

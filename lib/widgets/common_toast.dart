@@ -12,21 +12,21 @@ enum ToastType {
 class CommonToast {
   CommonToast._();
 
-  /// Show a toast with gradient background and optional icon
+  /// Show a toast with solid background color and optional icon
   ///
   /// [message] - The text to display
   /// [type] - The type of toast (success, error, info, loading)
-  /// [gradientColors] - Custom gradient colors (uses type default if null)
+  /// [backgroundColor] - Custom background color (uses type default if null)
   /// [duration] - How long to show the toast (default 3s, 0 = persistent)
   static void show(
     BuildContext context, {
     required String message,
     required ToastType type,
-    List<Color>? gradientColors,
+    Color? backgroundColor,
     Duration? duration,
   }) {
     final effectiveDuration = duration ?? const Duration(seconds: 3);
-    final colors = gradientColors ?? _getDefaultColors(type);
+    final color = backgroundColor ?? _getDefaultColor(type);
     final icon = _getIcon(type);
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -39,17 +39,13 @@ class CommonToast {
         content: Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: colors,
-            ),
+            color: color,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: colors.first.withOpacity(0.4),
-                blurRadius: 16,
-                spreadRadius: 2,
+                color: color.withOpacity(0.25),
+                blurRadius: 12,
+                spreadRadius: 0,
                 offset: const Offset(0, 4),
               ),
             ],
@@ -82,7 +78,7 @@ class CommonToast {
     );
   }
 
-  /// Show a success toast with green gradient
+  /// Show a success toast with green background
   static void showSuccess(
     BuildContext context,
     String message, {
@@ -96,7 +92,7 @@ class CommonToast {
     );
   }
 
-  /// Show an error toast with red gradient
+  /// Show an error toast with red background
   static void showError(
     BuildContext context,
     String message, {
@@ -110,7 +106,7 @@ class CommonToast {
     );
   }
 
-  /// Show an info toast with blue gradient
+  /// Show an info toast with blue background
   static void showInfo(
     BuildContext context,
     String message, {
@@ -124,44 +120,32 @@ class CommonToast {
     );
   }
 
-  /// Show a loading toast with custom gradient (typically game colors)
+  /// Show a loading toast with custom background color
   /// Returns immediately - caller should dismiss manually if needed
   static void showLoading(
     BuildContext context,
     String message, {
-    required List<Color> gradientColors,
+    required Color backgroundColor,
   }) {
     show(
       context,
       message: message,
       type: ToastType.loading,
-      gradientColors: gradientColors,
+      backgroundColor: backgroundColor,
       duration: const Duration(seconds: 10), // Long duration for loading
     );
   }
 
-  static List<Color> _getDefaultColors(ToastType type) {
+  static Color _getDefaultColor(ToastType type) {
     switch (type) {
       case ToastType.success:
-        return [
-          const Color(0xFF2E7D32), // Green
-          const Color(0xFF1B5E20),
-        ];
+        return const Color(0xFF2E7D32); // Green
       case ToastType.error:
-        return [
-          const Color(0xFFD32F2F), // Red
-          const Color(0xFFC62828),
-        ];
+        return const Color(0xFFD32F2F); // Red
       case ToastType.info:
-        return [
-          const Color(0xFF1976D2), // Blue
-          const Color(0xFF1565C0),
-        ];
+        return const Color(0xFF1976D2); // Blue
       case ToastType.loading:
-        return [
-          const Color(0xFF1976D2),
-          const Color(0xFF1565C0),
-        ];
+        return const Color(0xFF1976D2); // Blue
     }
   }
 

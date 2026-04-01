@@ -3,31 +3,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../constants/app_colors.dart';
-import '../../../../constants/app_text_styles.dart';
-import '../../../../models/game.dart';
-import '../../../../widgets/game_card.dart';
+import '../../constants/app_colors.dart';
+import '../../constants/app_text_styles.dart';
+import '../../models/game.dart';
+import '../../widgets/game_card.dart';
 
 class GameSelectionScreen extends StatelessWidget {
   const GameSelectionScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Force dark status bar icons on dark background
+    // Light theme — dark status bar icons on light background
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,
       ),
     );
 
     return Scaffold(
       backgroundColor: AppColors.gsBackground,
-      body: Column(
-        children: [
-          _GameSelectionHeader(),
-          Expanded(child: _GameCardList()),
-        ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            _GameSelectionHeader(),
+            Expanded(child: _GameCardList()),
+          ],
+        ),
       ),
     );
   }
@@ -40,14 +42,10 @@ class _GameSelectionHeader extends StatelessWidget {
 
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [AppColors.gsHeader, AppColors.gsBackground],
-        ),
+        color: AppColors.gsHeader,
       ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(16, statusBarHeight + 12, 16, 12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -99,7 +97,7 @@ class _GameSelectionHeader extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
-                color: AppColors.gsAccentBlue.withOpacity(0.12),
+                color: AppColors.gsAccentBlue.withOpacity(0.10),
                 border: Border.all(
                   color: AppColors.gsAccentBlue.withOpacity(0.3),
                   width: 1,

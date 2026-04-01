@@ -11,6 +11,7 @@ class Game {
   final String subtitle;
   final GameStatus status;
   final List<Color> gradientColors;
+  final Color headerColor;
   final Color statusColor;
   final String ghostNumber;
 
@@ -20,6 +21,7 @@ class Game {
     required this.subtitle,
     required this.status,
     required this.gradientColors,
+    required this.headerColor,
     required this.statusColor,
     required this.ghostNumber,
   });
@@ -48,6 +50,7 @@ final List<Game> mockGames = [
       AppColors.game01pmMid,
       AppColors.game01pmDark,
     ],
+    headerColor: AppColors.game01pmMid,
     statusColor: AppColors.statusLive,
     ghostNumber: '01',
   ),
@@ -61,6 +64,7 @@ final List<Game> mockGames = [
       AppColors.gameKl3pmMid,
       AppColors.gameKl3pmDark,
     ],
+    headerColor: AppColors.gameKl3pmMid,
     statusColor: AppColors.statusOpen,
     ghostNumber: '02',
   ),
@@ -74,7 +78,8 @@ final List<Game> mockGames = [
       AppColors.game06pmMid,
       AppColors.game06pmDark,
     ],
-    statusColor: Color(0xFFC39BD3),
+    headerColor: AppColors.game06pmMid,
+    statusColor: Color(0xFF9B59B6),
     ghostNumber: '03',
   ),
   const Game(
@@ -87,6 +92,7 @@ final List<Game> mockGames = [
       AppColors.game08pmMid,
       AppColors.game08pmDark,
     ],
+    headerColor: AppColors.game08pmMid,
     statusColor: AppColors.statusSoon,
     ghostNumber: '04',
   ),

@@ -148,10 +148,7 @@ class _BookingScreenState extends State<BookingScreen> {
     }
   }
 
-  Color _resolvedAccentColor(List<Color> colors) {
-    if (colors.first.computeLuminance() < 0.08) return AppColors.gsAccentBlue;
-    return colors.first;
-  }
+  // Accent color is now the same as header color (solid)
 
   // Amount helpers — select rate based on LSK type, mirrors server _ticket_rates().
   // A/B/C → single  |  AB/AC/BC → double  |  Super → super  |  Box → box
@@ -481,7 +478,7 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  void _onSave(Color accentColor, List<Color> headerColors) {
+  void _onSave(Color accentColor, Color headerColor) {
     if (_entries.isEmpty) {
       _showResultBanner(
         message: 'No entries to save.',
@@ -511,23 +508,23 @@ class _BookingScreenState extends State<BookingScreen> {
         totalDAmount: _fmtAmt(_totalDAmount),
         gameName: widget.gameName,
         dealerName: _selectedDealer!.name,
-        headerColors: headerColors,
+        headerColor: headerColor,
         accentColor: accentColor,
         onConfirm: () {
           Navigator.of(ctx).pop();
-          _submitSave(accentColor, headerColors);
+          _submitSave(accentColor, headerColor);
         },
         onCancel: () => Navigator.of(ctx).pop(),
       ),
     );
   }
 
-  Future<void> _submitSave(Color accentColor, List<Color> headerColors) async {
+  Future<void> _submitSave(Color accentColor, Color headerColor) async {
     _showResultBanner(
       message: 'Saving ${_entries.length} entries...',
       icon: Icons.hourglass_top_rounded,
       accentColor: accentColor,
-      headerColors: headerColors,
+      headerColors: [headerColor, headerColor],
       duration: const Duration(seconds: 30), // dismissed on completion
     );
 
@@ -597,18 +594,12 @@ class _BookingScreenState extends State<BookingScreen> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: headerColors.length >= 2
-                      ? [headerColors[0], headerColors.last]
-                      : [accentColor, accentColor],
-                ),
-                borderRadius: BorderRadius.circular(14),
+                color: accentColor,
+                borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: accentColor.withOpacity(0.35),
-                    blurRadius: 14,
+                    color: accentColor.withOpacity(0.25),
+                    blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -662,15 +653,14 @@ class _BookingScreenState extends State<BookingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Light theme — dark status bar icons on light background
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
+      statusBarIconBrightness: Brightness.dark,
     ));
 
     final game = _game;
-    final headerColors = game?.gradientColors ??
-        [AppColors.primaryBlue, AppColors.primaryBlueDark];
-    final accentColor = _resolvedAccentColor(headerColors);
+    final headerColor = game?.headerColor ?? AppColors.primaryBlue;
 
     return Scaffold(
       backgroundColor: AppColors.dashboardBg,
@@ -682,22 +672,22 @@ class _BookingScreenState extends State<BookingScreen> {
             _BookingHeader(
               gameName: widget.gameName,
               gameId: widget.gameId,
-              headerColors: headerColors,
+              headerColor: headerColor,
             ),
             Expanded(
               child: Column(
                 children: [
-                  _buildTopControls(accentColor),
+                  _buildTopControls(headerColor),
                   _buildDivider(),
-                  _buildInputRow(accentColor),
-                  _buildPasteField(accentColor),
-                  _buildActionButtons(accentColor),
-                  _buildTableHeader(accentColor),
-                  Expanded(child: _buildTableBody(accentColor)),
+                  _buildInputRow(headerColor),
+                  _buildPasteField(headerColor),
+                  _buildActionButtons(headerColor),
+                  _buildTableHeader(headerColor),
+                  Expanded(child: _buildTableBody(headerColor)),
                 ],
               ),
             ),
-            _buildFooter(accentColor, headerColors),
+            _buildFooter(headerColor),
           ],
         ),
       ),
@@ -1091,7 +1081,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
   // ── Footer ──────────────────────────────────────────────────────────────────
 
-  Widget _buildFooter(Color accentColor, List<Color> headerColors) {
+  Widget _buildFooter(Color accentColor) {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.dashboardSurface,
@@ -1118,19 +1108,11 @@ class _BookingScreenState extends State<BookingScreen> {
                   value: _fmtAmt(_totalDAmount),
                   accentColor: accentColor)),
           GestureDetector(
-            onTap: () => _onSave(accentColor, headerColors),
+            onTap: () => _onSave(accentColor, accentColor),
             child: Container(
               width: 110,
               height: 52,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: headerColors.length >= 2
-                      ? [headerColors[0], headerColors.last]
-                      : [accentColor, accentColor],
-                ),
-              ),
+              color: accentColor,
               alignment: Alignment.center,
               child: Text(
                 'Save-${widget.gameName.replaceAll(' ', '')}',
@@ -1160,7 +1142,7 @@ class _SaveConfirmDialog extends StatelessWidget {
   final String totalDAmount;
   final String gameName;
   final String dealerName;
-  final List<Color> headerColors;
+  final Color headerColor;
   final Color accentColor;
   final VoidCallback onConfirm;
   final VoidCallback onCancel;
@@ -1172,7 +1154,7 @@ class _SaveConfirmDialog extends StatelessWidget {
     required this.totalDAmount,
     required this.gameName,
     required this.dealerName,
-    required this.headerColors,
+    required this.headerColor,
     required this.accentColor,
     required this.onConfirm,
     required this.onCancel,
@@ -1193,20 +1175,12 @@ class _SaveConfirmDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Gradient header
+            // Solid color header
             Container(
               width: double.infinity,
               padding:
                   const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: headerColors.length >= 2
-                      ? [headerColors[0], headerColors.last]
-                      : [accentColor, accentColor],
-                ),
-              ),
+              color: headerColor,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1272,15 +1246,11 @@ class _SaveConfirmDialog extends StatelessWidget {
                           child: Container(
                             height: 46,
                             decoration: BoxDecoration(
+                              color: headerColor,
                               borderRadius: BorderRadius.circular(12),
-                              gradient: LinearGradient(
-                                colors: headerColors.length >= 2
-                                    ? [headerColors[0], headerColors.last]
-                                    : [accentColor, accentColor],
-                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: accentColor.withOpacity(0.35),
+                                  color: headerColor.withOpacity(0.25),
                                   blurRadius: 10,
                                   offset: const Offset(0, 3),
                                 ),
@@ -1590,12 +1560,12 @@ class _DealerPickerDialogState extends State<_DealerPickerDialog> {
 class _BookingHeader extends StatelessWidget {
   final String gameName;
   final String gameId;
-  final List<Color> headerColors;
+  final Color headerColor;
 
   const _BookingHeader({
     required this.gameName,
     required this.gameId,
-    required this.headerColors,
+    required this.headerColor,
   });
 
   @override
@@ -1606,15 +1576,7 @@ class _BookingHeader extends StatelessWidget {
         '${gameName.split(' ').first}-${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
 
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: headerColors.length >= 2
-              ? [headerColors[0], headerColors.last]
-              : [headerColors[0], headerColors[0]],
-        ),
-      ),
+      color: headerColor,
       child: Padding(
         padding: EdgeInsets.fromLTRB(6, statusBarHeight + 4, 6, 14),
         child: Row(

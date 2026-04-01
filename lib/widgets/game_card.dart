@@ -24,17 +24,13 @@ class GameCard extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          gradient: LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: game.gradientColors,
-          ),
+          color: game.headerColor,
           boxShadow: [
             BoxShadow(
-              color: game.gradientColors.first.withOpacity(0.35),
-              blurRadius: 12,
+              color: game.headerColor.withOpacity(0.25),
+              blurRadius: 8,
               spreadRadius: 0,
-              offset: const Offset(0, 4),
+              offset: const Offset(0, 3),
             ),
           ],
         ),
@@ -45,8 +41,6 @@ class GameCard extends StatelessWidget {
             _buildGhostNumber(),
             // Card content
             _buildCardContent(),
-            // Bottom accent line
-            _buildBottomAccent(),
           ],
         ),
       ),
@@ -102,7 +96,7 @@ class GameCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.25),
+        color: Colors.black.withOpacity(0.20),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: game.statusColor.withOpacity(0.5),
@@ -185,26 +179,6 @@ class GameCard extends StatelessWidget {
           size: 16,
         ),
       ],
-    );
-  }
-
-  Widget _buildBottomAccent() {
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      child: Container(
-        height: 3,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.white.withOpacity(0.0),
-              Colors.white.withOpacity(0.15),
-              Colors.white.withOpacity(0.0),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
